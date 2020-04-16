@@ -48,6 +48,7 @@ class CRM_Cpptmembership_APIWrappers_Membership {
         'sequential' => 1,
         'membership_id' => $value['id'],
         'contribution_id.receive_date' => ['>=' => $cutoffDateString],
+        'contribution_id.contribution_status_id' => "Completed",
       ]);
     }
     return $result;
