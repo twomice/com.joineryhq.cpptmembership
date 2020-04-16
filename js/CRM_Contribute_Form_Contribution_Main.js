@@ -1,6 +1,5 @@
 (function(ts) {
   CRM.$(function($) {
-console.log('main.js');
 
     /**
      * JS change handler for "members" checkboxes.
@@ -8,11 +7,14 @@ console.log('main.js');
      */
     var cpptUpdateTotal = function cpptUpdateTotal(e) {
       var rate = 31; // FIXME: take this from membership type, not hard-coded like this.
-      var countChecked = $('input.cppt-membership-id:checked').length;
+      var countChecked = $('input[type="checkbox"].cppt-member:checked:visible').length;
       var total = rate * countChecked;
       $('div.other_amount-section div.other_amount-content input[type="text"][id^="price_"]').val(total).keyup();
       $('div.cppt_total-section div.content').html(CRM.formatMoney(total));
-
+      $('div.crm-submit-buttons').hide();
+      if (total) {
+        $('div.crm-submit-buttons').show();
+      }
     }
 
     /**
@@ -21,44 +23,24 @@ console.log('main.js');
      */
     var cpptOrganizationChange = function cpptOrganizationChange(e) {
       var newVal = $('#cppt_organization').val();
-      $('div.cppt_names-section div.content').empty();
+      
+      $('div.cppt_names-org').hide();
       $('div.cppt_names-section').hide();
       $('div.cppt_total-section').hide();
-      cpptUpdateTotal();
+      $('p#cppt-haspayment-notice').hide();
+      
       if (newVal > 0) {
-        // Only if we've selected an org. Fetch the related cppt members.
-        CRM.api3('Membership', 'get', {
-          "sequential": 1,
-          "cpptLimitRelatedMembersOrgId": newVal,
-        }).then(function(result) {
-          console.log('result', result)
-          // Upon returning api, display checkboxes.
-          $('div.cppt_names-section').show();
-          $('div.cppt_total-section').show();
-          var hasPaidMembers = false;
-          for (i in result.values) {
-            // FIXME: if no values were found, say so to the user.
-            var value = result.values[i];
-            var checkbox_id = 'cppt-individual-' + value.id;
-            var label_id = 'label-' + checkbox_id;
-            
-            $('div.cppt_names-section div.content').append('<input type="checkbox" id="' + checkbox_id +'" class="cppt-membership-id" name="cppt_mid" value="' + value.id + '"> ');
-            $('div.cppt_names-section div.content').append('<label id="' + label_id + '" for="' + checkbox_id +'">' + value['contact_id.display_name'] + '</label><BR />');
-            if (value.paymentCount * 1) {
-              hasPaidMembers = true;
-              $('input#' + checkbox_id).attr('disabled', 'disabled');
-              $('label#' + label_id).after(' *');
-              $('label#' + label_id).css('opacity', '0.5');
-            }
-            $('#' + checkbox_id).change(cpptUpdateTotal);
-          };
-          if (hasPaidMembers) {
-            $('div.cppt_names-section div.content').append('<p style="margin-top: 1em;">* Certificate holder is current and need not be renewed.</p>');
-          }
-          cpptUpdateTotal();
-        }, function(error) {
-        });
+        $('div.cppt_names-org').hide();
+        var orgNamesSectionId = 'cppt_names-org-id-' + newVal;
+        $('#' + orgNamesSectionId).show();
+        $('div.cppt_names-section').show();
+        $('div.cppt_total-section').show();
       }
+      // Show explanation if any are disabled.
+      if ($('input[type="checkbox"].cppt-member:disabled:visible').length) {
+        $('p#cppt-haspayment-notice').show();        
+      }
+      cpptUpdateTotal();
     };
     
     $('div.email-5-section').after(`
@@ -88,19 +70,40 @@ console.log('main.js');
     // Move cppt_organization field and label into div structure.
     $('div.cppt_organization-section div.label').append($('table#bhfe_table label[for="cppt_organization"]'));
     $('div.cppt_organization-section div.content').append($('table#bhfe_table select#cppt_organization'));
+    
+    // Move membership checkboxes into  main table.
+    for (orgId in CRM.vars.cpptmembership.organizationMemberships) {
+      var orgNamesSectionId = 'cppt_names-org-id-' + orgId;
+      $('div.cppt_names-section div.content').append('<div id="' + orgNamesSectionId + '" class="cppt_names-org"/>')
+      for (i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {
+        var membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
+        var checkboxId = 'cppt_mid_' + orgId + '_' + membership.id;
+        $('#' + orgNamesSectionId).append($('table#bhfe_table input[type="checkbox"].cppt-member-org-' + orgId + '#' + checkboxId));
+        $('#' + orgNamesSectionId).append($('label[for="' + checkboxId + '"]'));
+        $('#' + orgNamesSectionId).append($('<br/>'));        
+        if (membership.paymentCount) {
+          $('label[for="' + checkboxId + '"]').css('opacity', '0.5');
+        }
+      }
+    }
+    // Create an explanation for disabled members.
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-haspayment-notice">* Certificate holder is current and need not be renewed.</p>');
+
     // Remove the bhfe table, which should be empty by now.
     $('table#bhfe_table').remove();
 
+    //  Set change handler for all cppt-member checkboxes
+    $('input[type="checkbox"].cppt-member').change(cpptUpdateTotal);
 
     //  hide not-you message:
     $('div.crm-not-you-message').hide();
-    // Set change hanler for 'cppt_organization'
     //  hide other amount section:
     $('div.other_amount-section').hide();
-    // Set change hanler for 'cppt_organization'
-    $('select#cppt_organization').change(cpptOrganizationChange);
     $('div.cppt_names-section').hide();
     $('div.cppt_total-section').hide();
+    // Set change hanler for 'cppt_organization'
+    $('select#cppt_organization').change(cpptOrganizationChange);
+    cpptOrganizationChange();
 
 
   });

@@ -19,8 +19,38 @@ function cpptmembership_civicrm_apiWrappers(&$wrappers, $apiRequest) {
   }
 }
 
+/**
+ * Implements hook_civicrm_buildAmount().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_buildAmount/
+ */
+function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amount) {
+    $a = 1;
+    return;
+}
+
+/**
+ * Implements hook_civicrm_postProcess().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_postProcess/
+ */
+function cpptmembership_civicrm_postProcess($formName, $form) {
+  if ($formName  == 'CRM_Contribute_Form_Contribution_Main') {
+    $a = 1;
+    return;
+  }
+}
+
+/**
+ * Implements hook_civicrm_buildForm().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_buildForm/
+ */
 function cpptmembership_civicrm_buildForm($formName, &$form) {
   if ($formName  == 'CRM_Contribute_Form_Contribution_Main') {
+    //  Define array to store variables for passing to JS.
+    $jsVars = [];
+
     //  fixme: only do this on pages where is_cppt_membership is true
     $contactId = CRM_Core_Session::singleton()->getLoggedInContactID();
     $organizations = CRM_Cpptmembership_Utils::getPermissionedContacts($contactId, null, null, 'Organization');
@@ -28,18 +58,40 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $organizationOptions =  ['' => '- ' . E::ts('select') . ' -'] + CRM_Utils_Array::collect('name', $organizations);
     $form->add('select', 'cppt_organization', E::ts('Renew for Organization'), $organizationOptions);
 
+    $organizationMemberships = _cpptmembership_getOrganizationMemberships(array_keys($organizations));
+    $jsVars['organizationMemberships'] = $organizationMemberships;
+    $cppt_mid_checkboxes = [];
+    foreach ($organizationMemberships as $orgId => $memberships) {
+      foreach ($memberships as $membership) {
+        $membershipId = $membership['id'];
+        $attributes = [
+          'class' => "cppt-member cppt-member-org-{$orgId}",
+        ];
+        $hasPaymentMarker = '';
+        if ($membership['paymentCount']) {
+          $hasPaymentMarker = ' *';
+          $attributes['disabled'] = 'disabled';
+        }
+        $cppt_mid_checkboxes[] = $form->createElement('checkbox', "{$orgId}_{$membershipId}", NULL, "{$membership['contact_id.display_name']}$hasPaymentMarker", $attributes);
+     }
+    }
+    $form->addGroup($cppt_mid_checkboxes, 'cppt_mid', NULL, '<br />');
+
     // freeze and re-label email field:
-//    $form = new CRM_Core_Form();
     $element = $form->getElement('email-5');
     $element->freeze();
     $element->setLabel(E::ts('Your email address'));
 
+    $template = CRM_Core_Smarty::singleton();
+    $bhfe = $template->get_template_vars('beginHookFormElements');
     if (!$bhfe) {
       $bhfe = [];
     }
     $bhfe[] = 'cppt_organization';
+    $bhfe[] = 'cppt_mid';
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Contribute_Form_Contribution_Main.js');
+    CRM_Core_Resources::singleton()->addVars('cpptmembership', $jsVars);
   }
   elseif ($formName  == 'CRM_Member_Form_MembershipBlock') {
     $form->addElement('checkbox', 'is_cppt_membership', E::ts('Special handling for CPPT memberships?'));
@@ -57,10 +109,59 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
 
   }
 }
+
+function _cpptmembership_getOrganizationMemberships($orgIds) {
+  $organizationMemberships = [];
+
+  // Determine payent $cutoff as most recent Oct 1.
+  $now = time();
+  $monthDay = 'october 1';
+  $cutoffThisYear = strtotime($monthDay);
+  if ($now > $cutoffThisYear) {
+    $cutoff = $cutoffThisYear;
+  }
+  else {
+    $cutoff = strtotime("$monthDay -1 year");
+  }
+  $cutoffDateString = date('Y-m-d', $cutoff);
+
+  // Fetch relevant memberships for each given org.
+  foreach ($orgIds as $orgId) {
+    $related = CRM_Cpptmembership_Utils::getPermissionedContacts($orgId, NULL, NULL, 'Individual');
+    $relatedCids = array_keys($related);
+    $apiParams = [];
+    $apiParams['contact_id'] = ['IN' => $relatedCids];
+    // We're limiting to related contacts, but in fact the api will have its
+    // own limitations, most notably blocking access to contacts if I don't
+    // have 'view all contacts'. So we skip permissions checks.
+    $apiParams['check_permissions'] = FALSE;
+    $apiParams['membership_type_id'] = 'CPPT';
+    $apiParams['return'] = ["contact_id.display_name", "contact_id.sort_name", "contact_id.id"];
+    // Default to 0 limit.
+    $apiParams['sequential'] = 1;
+    $apiParams['options']['limit'] = 0;
+    $apiParams['options']['sort'] = 'contact_id.sort_name';
+    $memberships = civicrm_api3('Membership', 'get', $apiParams);
+
+    // Note whether each membership has a payment after the cutoff date.
+    foreach ($memberships['values'] as &$value) {
+      $value['paymentCount'] = civicrm_api3('MembershipPayment', 'getCount', [
+        'sequential' => 1,
+        'membership_id' => $value['id'],
+        'contribution_id.receive_date' => ['>=' => $cutoffDateString],
+        'contribution_id.contribution_status_id' => "Completed",
+      ]);
+    }
+    $organizationMemberships[$orgId] = $memberships['values'];
+  }
+  return $organizationMemberships;
+}
+
+
 /**
  * Implements hook_civicrm_config().
  *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/ 
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/
  */
 function cpptmembership_civicrm_config(&$config) {
   _cpptmembership_civix_civicrm_config($config);
