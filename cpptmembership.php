@@ -3,16 +3,41 @@
 require_once 'cpptmembership.civix.php';
 use CRM_Cpptmembership_ExtensionUtil as E;
 
+
+/**
+ * Implements hook_civicrm_apiWrappers().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_apiWrappers/
+ */
+function cpptmembership_civicrm_apiWrappers(&$wrappers, $apiRequest) {
+  if (
+    strtolower($apiRequest['entity']) == 'membership'
+    && strtolower($apiRequest['action']) == 'get'
+    && CRM_Utils_Array::value('cpptLimitRelatedMembersOrgId', $apiRequest['params'], 0)
+  ) {
+    $wrappers[] = new CRM_Cpptmembership_APIWrappers_Membership();
+  }
+}
+
 function cpptmembership_civicrm_buildForm($formName, &$form) {
   if ($formName  == 'CRM_Contribute_Form_Contribution_Main') {
     //  fixme: only do this on pages where is_cppt_membership is true
     $contactId = CRM_Core_Session::singleton()->getLoggedInContactID();
-    $organizations = CRM_Contact_BAO_Relationship::getPermissionedContacts($contactId, NULL, NULL, 'Organization');
-    $form->add('select', 'ccpt_organization', E::ts('Organization'), CRM_Utils_Array::collect('name', $organizations));
+    $organizations = CRM_Cpptmembership_Utils::getPermissionedContacts($contactId, null, null, 'Organization');
+
+    $organizationOptions =  ['' => '- ' . E::ts('select') . ' -'] + CRM_Utils_Array::collect('name', $organizations);
+    $form->add('select', 'cppt_organization', E::ts('Renew for Organization'), $organizationOptions);
+
+    // freeze and re-label email field:
+//    $form = new CRM_Core_Form();
+    $element = $form->getElement('email-5');
+    $element->freeze();
+    $element->setLabel(E::ts('Your email address'));
+
     if (!$bhfe) {
       $bhfe = [];
     }
-    $bhfe[] = 'ccpt_organization';
+    $bhfe[] = 'cppt_organization';
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Contribute_Form_Contribution_Main.js');
   }
@@ -25,7 +50,11 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $bhfe[] = 'is_cppt_membership';
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Member_Form_MembershipBlock.js');
-// fixme: create postProcess hook to save this setting, and accordingly disable recurring, on-behalf, honoree
+// fixme: create postProcess hook to save this setting, and accordingly:
+//  disable: recurring, on-behalf, honoree;
+//  enable: amounts section, other amounts
+//  unset: price set; and all fields in quick-config price set;
+
   }
 }
 /**
