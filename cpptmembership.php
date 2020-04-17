@@ -10,21 +10,15 @@ use CRM_Cpptmembership_ExtensionUtil as E;
  */
 function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
   // Fixme: only do this for cppt contribution page.
-  if ($orgId = CRM_Utils_Array::value('cppt_organization', $form->_submitValues)) {
-    $label = E::ts('CPPT Recertification for: ');
+  $label = E::ts('CPPT Recertification for: ');
+  if (empty($form->_submitValues)) {
+    return;
+  }
+  $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_submitValues);
+  if (!empty($paidMemberships)) {
     $memberNames = [];
-    foreach (array_keys($form->_submitValues['cppt_mid']) as $mid) {
-      list($mid_orgId, $mid_membershipId) = explode('_', $mid);
-      if ($mid_orgId == $orgId) {
-        $membership = civicrm_api3('Membership', 'get', [
-          'sequential' => 1,
-          'return' => ["contact_id.display_name"],
-          'id' => $mid_membershipId,
-        ]);
-        if ($membership['id']) {
-          $memberNames[] = $membership['values'][0]['contact_id.display_name'];
-        }
-      }
+    foreach ($paidMemberships as $member) {
+      $memberNames[] = $member['contact_id.display_name'];
     }
     $label .= implode(', ', $memberNames);
     foreach ($amounts as &$amount) {
@@ -38,6 +32,30 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
   }
 }
 
+function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
+  $paidMemberships = [];
+  if ($orgId = CRM_Utils_Array::value('cppt_organization', $formValues)) {
+    foreach (array_keys($formValues['cppt_mid']) as $mid) {
+      list($mid_orgId, $mid_membershipId) = explode('_', $mid);
+      if ($mid_orgId == $orgId) {
+        $membership = civicrm_api3('Membership', 'get', [
+          'sequential' => 1,
+          'return' => ['contact_id.display_name', 'contact_id.id'],
+          'id' => $mid_membershipId,
+        ]);
+        if ($membership['id']) {
+          $paidMemberships[$mid_membershipId] = $membership['values'][0];
+        }
+      }
+    }
+  }
+  return $paidMemberships;
+}
+
+function _cpptmembership_getCpptPriceFromForm($form) {
+  // fixme: don't hardcode this.
+  return 31;
+}
 /**
  * Implements hook_civicrm_postProcess().
  *
@@ -45,10 +63,27 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
  */
 function cpptmembership_civicrm_postProcess($formName, $form) {
   if ($formName == 'CRM_Contribute_Form_Contribution_Confirm') {
-    $form->_contributionId;
+    $contributionId = $form->_contributionID;
+    $cpptPrice =  _cpptmembership_getCpptPriceFromForm($form);
+    $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_params);
+    foreach ($paidMemberships as $paidMembershipId => $paidMembership) {
+      // Create soft credit to contact
+      $contributionSoft = civicrm_api3('ContributionSoft', 'create', [
+        'contribution_id' => $contributionId,
+        'contact_id' => $paidMembership['contact_id.id'],
+        'amount' => $cpptPrice,
+        'soft_credit_type_id' => 1,
+      ]);
+      // Create membership payment
+      $membershipPayment = civicrm_api3('MembershipPayment', 'create', [
+        'contribution_id' => $contributionId,
+        'membership_id' => $paidMembershipId,
+      ]);
+    }
     $a = 1;
-    return;
+
   }
+  return;
 }
 
 /**
@@ -78,9 +113,12 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
           'class' => "cppt-member cppt-member-org-{$orgId}",
         ];
         $hasPaymentMarker = '';
-        if ($membership['paymentCount']) {
+        if ($membership['hasCompletedPayment']) {
           $hasPaymentMarker = ' *';
           $attributes['disabled'] = 'disabled';
+        }
+        elseif ($membership['hasPayment']) {
+          $hasPaymentMarker = ' &dagger;';
         }
         $cppt_mid_checkboxes[] = $form->createElement('checkbox', "{$orgId}_{$membershipId}", NULL, "{$membership['contact_id.display_name']}$hasPaymentMarker", $attributes);
      }
@@ -155,12 +193,28 @@ function _cpptmembership_getOrganizationMemberships($orgIds) {
 
     // Note whether each membership has a payment after the cutoff date.
     foreach ($memberships['values'] as &$value) {
-      $value['paymentCount'] = civicrm_api3('MembershipPayment', 'getCount', [
+      $payments = civicrm_api3('MembershipPayment', 'get', [
         'sequential' => 1,
         'membership_id' => $value['id'],
+        'return' => 'contribution_id.contribution_status_id',
         'contribution_id.receive_date' => ['>=' => $cutoffDateString],
-        'contribution_id.contribution_status_id' => "Completed",
+        'contribution_id.contribution_status_id' => ['IN' => [
+          1, //'Completed',
+          2, //'Pending',
+          5, //'In Progress',
+          6, //'Overdue',
+          8, //'Partially paid',
+        ]],
       ]);
+      if ($payments['count']) {
+        $value['hasPayment'] = TRUE;
+        foreach ($payments['values'] as $payment) {
+          if ($payment['contribution_id.contribution_status_id'] == 1) {
+            $value['hasCompletedPayment'] = TRUE;
+            break;
+          }
+        }
+      }
     }
     $organizationMemberships[$orgId] = $memberships['values'];
   }

@@ -19,23 +19,28 @@
      *
      */
     var cpptOrganizationChange = function cpptOrganizationChange(e) {
-      var newVal = $('#cppt_organization').val();
+      var orgId = $('#cppt_organization').val();
       
       $('div.cppt_names-org').hide();
       $('div.cppt_names-section').hide();
       $('div#pricesetTotal').hide();
       $('p#cppt-haspayment-notice').hide();
+      $('p#cppt-payment-pending-notice').hide();
       
-      if (newVal > 0) {
+      if (orgId > 0) {
         $('div.cppt_names-org').hide();
-        var orgNamesSectionId = 'cppt_names-org-id-' + newVal;
+        var orgNamesSectionId = 'cppt_names-org-id-' + orgId;
         $('#' + orgNamesSectionId).show();
         $('div.cppt_names-section').show();
         $('div#pricesetTotal').show();
-      }
-      // Show explanation if any are disabled.
-      if ($('input[type="checkbox"].cppt-member:disabled:visible').length) {
-        $('p#cppt-haspayment-notice').show();        
+        
+        // Show explanation if any are disabled.
+        if (paymentNotices[orgId].completed) {
+          $('p#cppt-haspayment-notice').show();        
+        }
+        if (paymentNotices[orgId].pending) {
+          $('p#cppt-payment-pending-notice').show();        
+        }
       }
       cpptUpdateTotal();
     };
@@ -73,13 +78,34 @@
         $('#' + orgNamesSectionId).append($('table#bhfe_table input[type="checkbox"].cppt-member-org-' + orgId + '#' + checkboxId));
         $('#' + orgNamesSectionId).append($('label[for="' + checkboxId + '"]'));
         $('#' + orgNamesSectionId).append($('<br/>'));        
-        if (membership.paymentCount) {
+        if (membership.hasCompletedPayment) {
           $('label[for="' + checkboxId + '"]').css('opacity', '0.5');
         }
       }
     }
+    
+    // Define shorthand object for tracking payment notices.
+    var paymentNotices = {};
+    for (orgId in CRM.vars.cpptmembership.organizationMemberships) {
+      paymentNotices[orgId] = {};
+      for (i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {      
+        var membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
+        if (membership.hasCompletedPayment) {
+          paymentNotices[orgId].completed = true;
+        }
+        else if (membership.hasPayment) {
+          paymentNotices[orgId].pending = true;          
+        }
+        if (paymentNotices[orgId].completed && paymentNotices[orgId].pending) {
+          break;
+        }
+      }
+    }    
+    
     // Create an explanation for disabled members.
     $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-haspayment-notice">* Certificate holder is current and need not be renewed.</p>');
+    // Create an explanation for payment-pending members.
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-payment-pending-notice">&dagger; Certificate holder has a payment already pending; you may wish to contact our office to complete that payment.</p>');
 
     // Remove the bhfe table, which should be empty by now.
     $('table#bhfe_table').remove();
@@ -96,7 +122,6 @@
     // Set change hanler for 'cppt_organization'
     $('select#cppt_organization').change(cpptOrganizationChange);
     cpptOrganizationChange();
-
 
   });
 }(CRM.ts('com.joineryhq.cpptmembership')));
