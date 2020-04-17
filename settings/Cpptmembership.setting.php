@@ -48,7 +48,7 @@ return array(
     'is_domain' => 1,
     'is_contact' => 0,
     'description' => E::ts('Price field which represents the correct "1 per membership" pricing for CPPT. This must be an active field of type "Text / Numeric Quantity", and must be configured in the price set for the above-named Contribution Page.'),
-    'title' => E::ts('Price Field'),
+    'title' => E::ts('CPPT Price Field'),
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getPriceFieldOptions',

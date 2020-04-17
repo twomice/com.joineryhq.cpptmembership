@@ -47,12 +47,12 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
   if ($contributionPageId != _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
     return;
   }
-  // Define the label.
-  $label = E::ts('CPPT Recertification for: ');
   if (empty($form->_submitValues)) {
     // This form has not been submitted, so there's nothing to do.
     return;
   }
+  // Define the label.
+  $label = E::ts('CPPT Recertification for: ');
   $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_submitValues);
   $priceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
   if (!empty($paidMemberships)) {
@@ -155,6 +155,24 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Contribute_Form_Contribution_Main.js');
     CRM_Core_Resources::singleton()->addVars('cpptmembership', $jsVars);
+  }
+  elseif (
+    $formName == 'CRM_Contribute_Form_ContributionPage_Settings'
+    || $formName == 'CRM_Contribute_Form_ContributionPage_Amount'
+    || $formName == 'CRM_Member_Form_MembershipBlock'
+    || $formName == 'CRM_Contribute_Form_ContributionPage_ThankYou'
+    || $formName == 'CRM_Friend_Form_Contribute'
+    || $formName == 'CRM_PCP_Form_Contribute'
+  ) {
+    // Only do this for cppt contribution page.
+    $contributionPageId = $form->getVar('_id');
+    if ($contributionPageId != _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
+      return;
+    }
+    $warnings = CRM_Cpptmembership_Utils::getContributionPageConfigWarnings($contributionPageId);
+    foreach ($warnings as $warning) {
+      CRM_Core_Session::setStatus($warning, NULL, NULL, ['expires' => 0]);
+    }
   }
 }
 

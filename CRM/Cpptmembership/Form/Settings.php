@@ -265,35 +265,10 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     if (!$this->_flagSubmitted) {
       $defaults = $this->setDefaultValues();
       if ($contributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $defaults)) {
-        $contributionPageGet = civicrm_api3('contributionPage', 'get', [
-          'id' => $contributionPageId,
-          'sequential' => 1,
-        ]);
-        $warnings = [];
-        if ($contributionPageGet['count']) {
-          $contributionPage = $contributionPageGet['values'][0];
-          if ($contributionPage['is_recur']) {
-            $warnings[] = E::ts('The selected Contribution Page is configured with "Recurring Contributions"; you should disable this setting before continuing.');
-          }
-          $ufJoinGet = civicrm_api3('ufJoin', 'get', [
-            'entity_table' => 'civicrm_contribution_page',
-            'is_active' => 1,
-            'entity_id' => $contributionPageId,
-            'module' => ['IN' => ['soft_credit', 'on_behalf']],
-            'sequential' => 1,
-          ]);
-          foreach ($ufJoinGet['values'] as $value) {
-            if ($value['module'] == 'soft_credit') {
-              $warnings[] = E::ts('The selected Contribution Page is configured with "Honoree Section Enabled"; you should disable this setting before continuing.');
-            }
-            if ($value['module'] == 'on_behalf') {
-              $warnings[] = E::ts('The selected Contribution Page is configured with "Allow individuals to contribute and / or signup for membership on behalf of an organization?"; you should disable this setting before continuing.');
-            }
-          }
+        $warnings = CRM_Cpptmembership_Utils::getContributionPageConfigWarnings($contributionPageId);
+        foreach ($warnings as $warning) {
+          CRM_Core_Session::setStatus($warning, NULL, NULL, ['expires' => 0]);
         }
-      }
-      foreach ($warnings as $warning) {
-        CRM_Core_Session::setStatus($warning);
       }
     }
   }

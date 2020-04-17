@@ -1,5 +1,6 @@
 <?php
 
+use CRM_Cpptmembership_ExtensionUtil as E;
 
 /**
  * Utility methods for cpptmembership
@@ -78,4 +79,61 @@ AND cc.sort_name LIKE '%$name%'";
     return $contacts;
   }
 
+  public static function getContributionPageConfigWarnings($contributionPageId) {
+    $warnings = [];
+    $contributionPageGet = civicrm_api3('contributionPage', 'get', [
+      'id' => $contributionPageId,
+      'sequential' => 1,
+    ]);
+    if ($contributionPageGet['count']) {
+      $contributionPage = $contributionPageGet['values'][0];
+      if ($contributionPage['is_recur']) {
+        $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but is also configured with "Recurring Contributions"; you should resolve this conflict before continuing.');
+      }
+      $ufJoinGet = civicrm_api3('ufJoin', 'get', [
+        'entity_table' => 'civicrm_contribution_page',
+        'is_active' => 1,
+        'entity_id' => $contributionPageId,
+        'module' => ['IN' => ['soft_credit', 'on_behalf']],
+        'sequential' => 1,
+      ]);
+      foreach ($ufJoinGet['values'] as $value) {
+        if ($value['module'] == 'soft_credit') {
+          $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but is also configured with "Honoree Section Enabled"; you should resolve this conflict before continuing.');
+        }
+        if ($value['module'] == 'on_behalf') {
+          $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but is also configured with "Allow individuals to contribute and / or signup for membership on behalf of an organization?"; you should resolve this conflict before continuing.');
+        }
+      }
+
+      // Membership should  not be enabled.
+      $membershipBlockCount = civicrm_api3('MembershipBlock', 'getCount', [
+        'sequential' => 1,
+        'is_active' => 1,
+        'entity_table' => "civicrm_contribution_page",
+        'entity_id' => $contributionPageId,
+      ]);
+      if ($membershipBlockCount) {
+        $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but is also configured with "Membership Section Enabled?"; you should resolve this conflict before continuing.');
+      }
+
+      // Price set should contain the configured price field.
+      $priceSetId = civicrm_api3('PriceField', 'getValue', [
+        'sequential' => 1,
+        'return' => 'price_set_id',
+        'id' => _cpptmembership_getSetting('cpptmembership_priceFieldId'),
+      ]);
+      $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
+      $queryParams = [
+        '1' => [$contributionPageId, 'Int'],
+        '2' => [$priceSetId, 'Int'],
+      ];
+      $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
+      if (!$dao->N) {
+        $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it does not use a Price Set containing the configured CPPT Price Field; you should resolve this conflict before continuing.');
+      }
+
+    }
+    return $warnings;
+  }
 }
