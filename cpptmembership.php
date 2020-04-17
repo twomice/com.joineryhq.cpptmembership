@@ -62,10 +62,9 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
     }
     $label .= implode(', ', $memberNames);
     foreach ($amounts[$priceFieldId]['options'] as &$option) {
-      foreach ($amount['options'] as &$option) {
-        $option['label'] = $label;
-        break;
-      }
+      $option['label'] = $label;
+      // There should be only one, so break here.
+      break;
     }
   }
 }
