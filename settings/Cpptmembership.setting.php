@@ -73,4 +73,20 @@ return array(
       array(ts('The field "Payment cut-off month and day" is required'), 'required'),
     ),
   ),
+  'cpptmembership_lockMembershipEndDate' => array(
+    'group_name' => 'Cpptmembership Settings',
+    'group' => 'cpptmembership',
+    'name' => 'cpptmembership_lockMembershipEndDate',
+    'type' => 'String',
+    'add' => '5.0',
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => E::ts('If set, this will cause all memberships of the configured CPPT type to have an end date of the last day of the current year, in the specific case that the end date is attempted to be set to the last date of a future year.'),
+    'title' => E::ts('Lock end dates for CPPT memberships?'),
+    'html_type' => 'Select',
+    'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getLockEndDateOptions',
+    // Omitting this line causes the setting to be omitted from the Settings form:
+     'quick_form_type' => 'Element',
+    'default' => 1,
+  ),
 );

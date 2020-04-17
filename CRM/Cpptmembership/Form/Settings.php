@@ -250,6 +250,13 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     return $options;
   }
 
+  function getLockEndDateOptions() {
+    return [
+      '1' => E::ts('Yes'),
+      '0' => E::ts('No'),
+    ];
+  }
+
   /**
    * Upon displaying the form (i.e., only if it's not being submitted now),
    * perform some checks on the configured Contribution Page to ensure it qualifies.

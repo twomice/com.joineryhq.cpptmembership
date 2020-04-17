@@ -9,6 +9,11 @@ use CRM_Cpptmembership_ExtensionUtil as E;
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_pre/
  */
 function cpptmembership_civicrm_pre($op, $objectName, $id, &$params) {
+  // Don't bother with anything here if CPPT end dates are not locked.
+  $lockEndDates = _cpptmembership_getSetting('cpptmembership_lockMembershipEndDate');
+  if (!$lockEndDates) {
+    return;
+  }
   $cpptMembershipTypeId = _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId');
   if ($objectName == 'Membership' && $op == 'edit') {
     $membership = civicrm_api3('Membership', 'getSingle', ['id' => $id]);
@@ -151,16 +156,6 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Contribute_Form_Contribution_Main.js');
     CRM_Core_Resources::singleton()->addVars('cpptmembership', $jsVars);
-  }
-  elseif ($formName  == 'CRM_Member_Form_MembershipBlock') {
-    $form->addElement('checkbox', 'is_cppt_membership', E::ts('Special handling for CPPT memberships?'));
-    $bhfe = $form->get_template_vars('beginHookFormElements');
-    if (!$bhfe) {
-      $bhfe = [];
-    }
-    $bhfe[] = 'is_cppt_membership';
-    $form->assign('beginHookFormElements', $bhfe);
-    CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Member_Form_MembershipBlock.js');
   }
 }
 
