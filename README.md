@@ -1,44 +1,29 @@
-# com.joineryhq.cpptmembership
+# CiviCRM: FPPTA: CPPT Recertification Memberships
+## com.joineryhq.cpptmembership
 
-![Screenshot](/images/screenshot.png)
-
-(*FIXME: In one or two paragraphs, describe what the extension does and why one would download it. *)
-
-The extension is licensed under [GPL-3.0](LICENSE.txt).
+Provides special handling of a properly configured contribution page, for specific
+features relevant to FPPTA, to wit: to allow for multiple CPPT re-certifications 
+to be submitted (and paid) at once.
 
 ## Requirements
 
 * PHP v7.0+
-* CiviCRM (*FIXME: Version number*)
+* CiviCRM 5.x
 
 ## Installation (Web UI)
 
-This extension has not yet been published for installation via the web UI.
-
-## Installation (CLI, Zip)
-
-Sysadmins and developers may download the `.zip` file for this extension and
-install it with the command-line tool [cv](https://github.com/civicrm/cv).
-
-```bash
-cd <extension-dir>
-cv dl com.joineryhq.cpptmembership@https://github.com/FIXME/com.joineryhq.cpptmembership/archive/master.zip
-```
-
-## Installation (CLI, Git)
-
-Sysadmins and developers may clone the [Git](https://en.wikipedia.org/wiki/Git) repo for this extension and
-install it with the command-line tool [cv](https://github.com/civicrm/cv).
-
-```bash
-git clone https://github.com/FIXME/com.joineryhq.cpptmembership.git
-cv en cpptmembership
-```
+This extension has not yet been published for installation via the web UI. Please 
+see the official CiviCRM documentation for instructions on [Manual installation of native extensions](https://docs.civicrm.org/sysadmin/en/latest/customize/extensions/#installing-a-new-extension).
 
 ## Usage
 
-(* FIXME: Where would a new user navigate to get started? What changes would they see? *)
+* Once installed, configuration is at Administer > CiviMember > CPPT Recertification Page. 
+* By default, when attempting to change the end date on CPPT membership to the last day of 
+  a future year, the end date will be locked to the last day of the current year.
 
-## Known Issues
+## Support
+This is a custom extension for CiviCRM, written for a specific site; it will have 
+no relevant functionality on other sites.
 
-(* FIXME *)
+Please contact the developer at allen@joineryhq.com to request help with similar 
+custom functionality for your own CiviCRM site.

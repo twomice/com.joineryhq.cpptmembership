@@ -2,7 +2,7 @@
 <extension key="com.joineryhq.cpptmembership" type="module">
   <file>cpptmembership</file>
   <name>FPPTA: CPPT Recertification Memberships</name>
-  <description>Provides special handling of a properly configured contribution page, to allow for multipe CPPT re-certifications to be submitted (and paid) at once.</description>
+  <description>Provides special handling of a properly configured contribution page, to allow for multiple CPPT re-certifications to be submitted (and paid) at once.</description>
   <license>GPL-3.0</license>
   <maintainer>
     <author>Allen Shaw</author>
