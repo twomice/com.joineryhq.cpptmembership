@@ -26,6 +26,7 @@
       $('div#pricesetTotal').hide();
       $('p#cppt-haspayment-notice').hide();
       $('p#cppt-payment-pending-notice').hide();
+      $('p#cppt-no-members-notice').hide();
       
       if (orgId > 0) {
         $('div.cppt_names-org').hide();
@@ -41,6 +42,13 @@
         if (paymentNotices[orgId].pending) {
           $('p#cppt-payment-pending-notice').show();        
         }
+        
+        // Show explanation if ther are none entirely.
+        console.log('input[type=checkbox].cppt-member.cppt-member-org-' + orgId);
+        if (!$('input[type=checkbox].cppt-member.cppt-member-org-' + orgId).length) {
+          $('p#cppt-no-members-notice').show();        
+        }
+        
       }
       cpptUpdateTotal();
     };
@@ -106,6 +114,8 @@
     $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-haspayment-notice">* Certificate holder is current and need not be renewed.</p>');
     // Create an explanation for payment-pending members.
     $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-payment-pending-notice">&dagger; Certificate holder has a payment already pending; you may wish to contact our office to complete that payment.</p>');
+    // Create an explanation for payment-pending members.
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-no-members-notice">This organization has no CPPT certificate holders on record.</p>');
 
     // Remove the bhfe table, which should be empty by now.
     $('table#bhfe_table').remove();

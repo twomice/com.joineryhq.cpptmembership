@@ -118,18 +118,27 @@ AND cc.sort_name LIKE '%$name%'";
       }
 
       // Price set should contain the configured price field.
-      $priceSetId = civicrm_api3('PriceField', 'getValue', [
+      $priceSetField = civicrm_api3('PriceField', 'get', [
         'sequential' => 1,
-        'return' => 'price_set_id',
+        'is_active' => 1,
+        'is_enter_qty' => 1,
+        'return' => ['price_set_id'],
         'id' => _cpptmembership_getSetting('cpptmembership_priceFieldId'),
       ]);
-      $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
-      $queryParams = [
-        '1' => [$contributionPageId, 'Int'],
-        '2' => [$priceSetId, 'Int'],
-      ];
-      $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
-      if (!$dao->N) {
+      $hasPriceField = FALSE;
+      if ($priceSetField['count']) {
+        $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
+        $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
+        $queryParams = [
+          '1' => [$contributionPageId, 'Int'],
+          '2' => [$priceSetId, 'Int'],
+        ];
+        $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
+        if ($dao->N) {
+          $hasPriceField = TRUE;
+        }
+      }
+      if(!$hasPriceField) {
         $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it does not use a Price Set containing the configured CPPT Price Field; you should resolve this conflict before continuing.');
       }
 

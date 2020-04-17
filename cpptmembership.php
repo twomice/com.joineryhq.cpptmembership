@@ -195,6 +195,7 @@ function _cpptmembership_getOrganizationMemberships($orgIds) {
   foreach ($orgIds as $orgId) {
     $related = CRM_Cpptmembership_Utils::getPermissionedContacts($orgId, NULL, NULL, 'Individual');
     $relatedCids = array_keys($related);
+    $relatedCids[] = 0;
     $apiParams = [];
     $apiParams['contact_id'] = ['IN' => $relatedCids];
     // We're limiting to related contacts, but in fact the api will have its
