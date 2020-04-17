@@ -1,26 +1,26 @@
 <?xml version="1.0"?>
 <extension key="com.joineryhq.cpptmembership" type="module">
   <file>cpptmembership</file>
-  <name>FIXME</name>
-  <description>FIXME</description>
+  <name>FPPTA: CPPT Recertification Memberships</name>
+  <description>Provides special handling of a properly configured contribution page, to allow for multipe CPPT re-certifications to be submitted (and paid) at once.</description>
   <license>GPL-3.0</license>
   <maintainer>
     <author>Allen Shaw</author>
     <email>allen@JoineryHQ.com</email>
   </maintainer>
   <urls>
-    <url desc="Main Extension Page">http://FIXME</url>
-    <url desc="Documentation">http://FIXME</url>
-    <url desc="Support">http://FIXME</url>
+    <url desc="Main Extension Page">https://github.com/twomice/com.joineryhq.cpptmembership</url>
+    <url desc="Documentation">https://github.com/twomice/com.joineryhq.cpptmembership</url>
+    <url desc="Support">http://joineryhq.com</url>
     <url desc="Licensing">http://www.gnu.org/licenses/gpl-3.0.html</url>
   </urls>
   <releaseDate>2020-04-09</releaseDate>
   <version>1.0</version>
-  <develStage>alpha</develStage>
+  <develStage>beta</develStage>
   <compatibility>
     <ver>5.0</ver>
   </compatibility>
-  <comments>This is a new, undeveloped module</comments>
+  <comments>Configuration is at Administer > CiviMember > CPPT Recertification Page. By default, when attempting to change the end date on CPPT membership to the last day of a future year, the end date will be locked to the last day of the current year.</comments>
   <classloader>
     <psr4 prefix="Civi\" path="Civi"/>
   </classloader>
