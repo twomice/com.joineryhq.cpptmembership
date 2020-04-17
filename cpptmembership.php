@@ -4,6 +4,34 @@ require_once 'cpptmembership.civix.php';
 use CRM_Cpptmembership_ExtensionUtil as E;
 
 /**
+ * Implements hook_civicrm_pre().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_pre/
+ */
+function cpptmembership_civicrm_pre($op, $objectName, $id, &$params) {
+  $cpptMembershipTypeId = 3;
+  if ($objectName == 'Membership' && $op == 'edit') {
+    $membership = civicrm_api3('Membership', 'getSingle', ['id' => $id]);
+    if ($membership['membership_type_id'] == $cpptMembershipTypeId) {
+      // For cppt memberships, lock date to current year, under certain conditions.
+      // If they're trying to  set the end date...
+      if ($endDate = CRM_Utils_Array::value('end_date', $params)) {
+        // If the end date is Dec 31 of some year.
+        $endDateMonthDay = date('m-d', strtotime($endDate));
+        if ($endDateMonthDay == '12-31') {
+          // If the end date is in some future year ...
+          $currentYear = date('Y');
+          if (date('Y', strtotime($endDate)) > $currentYear) {
+            // Then set the end date to Dec 31 in the current year.
+            $params['end_date'] = date('Ymd', strtotime("$currentYear-12-31"));
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_civicrm_buildAmount().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_buildAmount/
@@ -80,10 +108,7 @@ function cpptmembership_civicrm_postProcess($formName, $form) {
         'membership_id' => $paidMembershipId,
       ]);
     }
-    $a = 1;
-
   }
-  return;
 }
 
 /**
@@ -113,11 +138,11 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
           'class' => "cppt-member cppt-member-org-{$orgId}",
         ];
         $hasPaymentMarker = '';
-        if ($membership['hasCompletedPayment']) {
+        if (CRM_Utils_Array::value('hasCompletedPayment', $membership)) {
           $hasPaymentMarker = ' *';
           $attributes['disabled'] = 'disabled';
         }
-        elseif ($membership['hasPayment']) {
+        elseif (CRM_Utils_Array::value('hasPayment', $membership)) {
           $hasPaymentMarker = ' &dagger;';
         }
         $cppt_mid_checkboxes[] = $form->createElement('checkbox', "{$orgId}_{$membershipId}", NULL, "{$membership['contact_id.display_name']}$hasPaymentMarker", $attributes);
