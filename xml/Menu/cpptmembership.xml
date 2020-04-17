@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/admin/cpptmembership/settings</path>
+    <page_callback>CRM_Cpptmembership_Form_Settings</page_callback>
+    <title>CPPT Membership Settings</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>

@@ -9,7 +9,7 @@ use CRM_Cpptmembership_ExtensionUtil as E;
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_pre/
  */
 function cpptmembership_civicrm_pre($op, $objectName, $id, &$params) {
-  $cpptMembershipTypeId = _cpptmembership_getSetting('cpptMembershipTypeId');
+  $cpptMembershipTypeId = _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId');
   if ($objectName == 'Membership' && $op == 'edit') {
     $membership = civicrm_api3('Membership', 'getSingle', ['id' => $id]);
     if ($membership['membership_type_id'] == $cpptMembershipTypeId) {
@@ -39,7 +39,7 @@ function cpptmembership_civicrm_pre($op, $objectName, $id, &$params) {
 function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
   // Only do this for cppt contribution page.
   $contributionPageId = $form->getVar('_id');
-  if ($contributionPageId != _cpptmembership_getSetting('cpptContributionPageId')) {
+  if ($contributionPageId != _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
     return;
   }
   // Define the label.
@@ -49,7 +49,7 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
     return;
   }
   $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_submitValues);
-  $priceFieldId = _cpptmembership_getSetting('priceFieldId');
+  $priceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
   if (!empty($paidMemberships)) {
     $memberNames = [];
     foreach ($paidMemberships as $member) {
@@ -101,7 +101,7 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
   if ($formName  == 'CRM_Contribute_Form_Contribution_Main') {
     // Only do this for cppt contribution page.
     $contributionPageId = $form->getVar('_id');
-    if ($contributionPageId != _cpptmembership_getSetting('cpptContributionPageId')) {
+    if ($contributionPageId != _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
       return;
     }
     
@@ -161,10 +161,6 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $bhfe[] = 'is_cppt_membership';
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Member_Form_MembershipBlock.js');
-// fixme: create postProcess hook to save this setting, and accordingly:
-//  disable: recurring, on-behalf, honoree;
-//  enable: amounts section, other amounts
-//  unset: price set; and all fields in quick-config price set;
 
   }
 }
@@ -174,7 +170,7 @@ function _cpptmembership_getOrganizationMemberships($orgIds) {
 
   // Determine payent $cutoff as most recent Oct 1.
   $now = time();
-  $monthDay = _cpptmembership_getSetting('cutoffMonthDayEnglish');
+  $monthDay = _cpptmembership_getSetting('cpptmembership_cutoffMonthDayEnglish');
   $cutoffThisYear = strtotime($monthDay);
   if ($now > $cutoffThisYear) {
     $cutoff = $cutoffThisYear;
@@ -194,7 +190,7 @@ function _cpptmembership_getOrganizationMemberships($orgIds) {
     // own limitations, most notably blocking access to contacts if I don't
     // have 'view all contacts'. So we skip permissions checks.
     $apiParams['check_permissions'] = FALSE;
-    $apiParams['membership_type_id'] = _cpptmembership_getSetting('cpptMembershipTypeId');
+    $apiParams['membership_type_id'] = _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId');
     $apiParams['return'] = ["contact_id.display_name", "contact_id.sort_name", "contact_id.id"];
     // Default to 0 limit.
     $apiParams['sequential'] = 1;
@@ -400,13 +396,7 @@ function cpptmembership_civicrm_navigationMenu(&$menu) {
 } // */
 
 function _cpptmembership_getSetting($settingName) {
-  $settings = [
-    'cpptMembershipTypeId' => 3,
-    'cpptContributionPageId' => 10,
-    'priceFieldId' => 208,
-    'cutoffMonthDayEnglish' => 'October 1',
-  ];
-  return $settings[$settingName];
+  return Civi::settings()->get($settingName);
 }
 
 function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
@@ -431,7 +421,7 @@ function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
 
 function _cpptmembership_getCpptPrice() {
   $priceFieldValue = civicrm_api3('priceFieldValue', 'getSingle', [
-    'price_field_id' => _cpptmembership_getSetting('priceFieldId')
+    'price_field_id' => _cpptmembership_getSetting('cpptmembership_priceFieldId')
   ]);
   return CRM_Utils_Array::value('amount', $priceFieldValue);
 }
