@@ -6,13 +6,10 @@
      *
      */
     var cpptUpdateTotal = function cpptUpdateTotal(e) {
-      var rate = 31; // FIXME: take this from membership type, not hard-coded like this.
       var countChecked = $('input[type="checkbox"].cppt-member:checked:visible').length;
-      var total = rate * countChecked;
-      $('div.other_amount-section div.other_amount-content input[type="text"][id^="price_"]').val(total).keyup();
-      $('div.cppt_total-section div.content').html(CRM.formatMoney(total));
+      $('div.other_amount-section div.other_amount-content input[type="text"][id^="price_"]').val(countChecked).keyup();
       $('div.crm-submit-buttons').hide();
-      if (total) {
+      if (countChecked) {
         $('div.crm-submit-buttons').show();
       }
     }
@@ -26,7 +23,7 @@
       
       $('div.cppt_names-org').hide();
       $('div.cppt_names-section').hide();
-      $('div.cppt_total-section').hide();
+      $('div#pricesetTotal').hide();
       $('p#cppt-haspayment-notice').hide();
       
       if (newVal > 0) {
@@ -34,7 +31,7 @@
         var orgNamesSectionId = 'cppt_names-org-id-' + newVal;
         $('#' + orgNamesSectionId).show();
         $('div.cppt_names-section').show();
-        $('div.cppt_total-section').show();
+        $('div#pricesetTotal').show();
       }
       // Show explanation if any are disabled.
       if ($('input[type="checkbox"].cppt-member:disabled:visible').length) {
@@ -42,7 +39,7 @@
       }
       cpptUpdateTotal();
     };
-    
+        
     $('div.email-5-section').after(`
       <div class="crm-public-form-item crm-section cppt_organization-section">
         <div class="label"></div>
@@ -56,13 +53,8 @@
         </div>
         <div class="clear"></div>
       </div>
-      <div class="crm-public-form-item crm-section cppt_total-section">
-        <div class="label">Total Due:</div>
-        <div class="content">
-        </div>
-        <div class="clear"></div>
-      </div>
     `);
+    $('div.cppt_names-section').after($('div#pricesetTotal'));
 
     // Give the bhfe elements table an id so we can handle it later.
     $('select#cppt_organization').closest('table').attr('id', 'bhfe_table');
@@ -98,9 +90,9 @@
     //  hide not-you message:
     $('div.crm-not-you-message').hide();
     //  hide other amount section:
-    $('div.other_amount-section').hide();
+    $('div.other_amount-section').hide(); 
     $('div.cppt_names-section').hide();
-    $('div.cppt_total-section').hide();
+    $('div#pricesetTotal').hide();
     // Set change hanler for 'cppt_organization'
     $('select#cppt_organization').change(cpptOrganizationChange);
     cpptOrganizationChange();

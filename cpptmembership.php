@@ -3,30 +3,39 @@
 require_once 'cpptmembership.civix.php';
 use CRM_Cpptmembership_ExtensionUtil as E;
 
-
-/**
- * Implements hook_civicrm_apiWrappers().
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_apiWrappers/
- */
-function cpptmembership_civicrm_apiWrappers(&$wrappers, $apiRequest) {
-  if (
-    strtolower($apiRequest['entity']) == 'membership'
-    && strtolower($apiRequest['action']) == 'get'
-    && CRM_Utils_Array::value('cpptLimitRelatedMembersOrgId', $apiRequest['params'], 0)
-  ) {
-    $wrappers[] = new CRM_Cpptmembership_APIWrappers_Membership();
-  }
-}
-
 /**
  * Implements hook_civicrm_buildAmount().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_buildAmount/
  */
-function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amount) {
-    $a = 1;
-    return;
+function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
+  // Fixme: only do this for cppt contribution page.
+  if ($orgId = CRM_Utils_Array::value('cppt_organization', $form->_submitValues)) {
+    $label = E::ts('CPPT Recertification for: ');
+    $memberNames = [];
+    foreach (array_keys($form->_submitValues['cppt_mid']) as $mid) {
+      list($mid_orgId, $mid_membershipId) = explode('_', $mid);
+      if ($mid_orgId == $orgId) {
+        $membership = civicrm_api3('Membership', 'get', [
+          'sequential' => 1,
+          'return' => ["contact_id.display_name"],
+          'id' => $mid_membershipId,
+        ]);
+        if ($membership['id']) {
+          $memberNames[] = $membership['values'][0]['contact_id.display_name'];
+        }
+      }
+    }
+    $label .= implode(', ', $memberNames);
+    foreach ($amounts as &$amount) {
+      if (isset($amount['options'])) {
+        foreach ($amount['options'] as &$option) {
+          $option['label'] = $label;
+          break;
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -35,7 +44,8 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amount) {
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_postProcess/
  */
 function cpptmembership_civicrm_postProcess($formName, $form) {
-  if ($formName  == 'CRM_Contribute_Form_Contribution_Main') {
+  if ($formName == 'CRM_Contribute_Form_Contribution_Confirm') {
+    $form->_contributionId;
     $a = 1;
     return;
   }
