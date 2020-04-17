@@ -285,7 +285,6 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
           }
         }
       }
-      dsm($warnings, '$warnings');
       foreach ($warnings as $warning) {
         CRM_Core_Session::setStatus($warning);
       }

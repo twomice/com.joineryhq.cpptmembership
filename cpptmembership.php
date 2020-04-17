@@ -161,7 +161,6 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $bhfe[] = 'is_cppt_membership';
     $form->assign('beginHookFormElements', $bhfe);
     CRM_Core_Resources::singleton()->addScriptFile('com.joineryhq.cpptmembership', 'js/CRM_Member_Form_MembershipBlock.js');
-
   }
 }
 
@@ -367,33 +366,22 @@ function cpptmembership_civicrm_themes(&$themes) {
   _cpptmembership_civix_civicrm_themes($themes);
 }
 
-// --- Functions below this ship commented out. Uncomment as required. ---
-
-/**
- * Implements hook_civicrm_preProcess().
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_preProcess
- *
-function cpptmembership_civicrm_preProcess($formName, &$form) {
-
-} // */
-
 /**
  * Implements hook_civicrm_navigationMenu().
  *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_navigationMenu
- *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_navigationMenu
+ */
 function cpptmembership_civicrm_navigationMenu(&$menu) {
-  _cpptmembership_civix_insert_navigation_menu($menu, 'Mailings', array(
-    'label' => E::ts('New subliminal message'),
-    'name' => 'mailing_subliminal_message',
-    'url' => 'civicrm/mailing/subliminal',
-    'permission' => 'access CiviMail',
-    'operator' => 'OR',
-    'separator' => 0,
+  _cpptmembership_civix_insert_navigation_menu($menu, 'Administer/CiviMember', array(
+    'label' => E::ts('CPPT Recertification Page'),
+    'name' => 'CPPT Recertification Page',
+    'url' => 'civicrm/admin/cpptmembership/settings?reset=1',
+    'permission' => 'administer CiviCRM',
+    'operator' => 'AND',
+    'separator' => NULL,
   ));
   _cpptmembership_civix_navigationMenu($menu);
-} // */
+}
 
 function _cpptmembership_getSetting($settingName) {
   return Civi::settings()->get($settingName);
