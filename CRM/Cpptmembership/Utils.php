@@ -8,7 +8,8 @@ class CRM_Cpptmembership_Utils {
 
   /**
    * Function to return list of permissioned contacts for a given contact and relationship type.
-   * Copied and modified from CRM_Contact_BAO_Relationship::getPermissionedContacts().
+   * Copied and modified from CRM_Contact_BAO_Relationship::getPermissionedContacts(), with
+   * improvements made to support both a=>b and b=>a relationship types.
    *
    * @param int $contactID
    *   contact id whose permissioned contacts are to be found.
