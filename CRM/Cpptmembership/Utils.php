@@ -166,7 +166,7 @@ AND cc.sort_name LIKE '%$name%'";
       $endTime = strtotime($membership['end_date']);
       $currentlyDueEndTime = strtotime($currentlyDueEndDate);
       $previouslyDueEndTime = strtotime($previouslyDueEndDate);
-      if ($endTime > $previouslyDueEndTime && $endTime <= $currentlyDueEndDate) {
+      if (($endTime > $previouslyDueEndTime) && ($endTime <= $currentlyDueEndTime)) {
         return FALSE;
       }
     }
