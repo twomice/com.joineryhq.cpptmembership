@@ -138,7 +138,7 @@ AND cc.sort_name LIKE '%$name%'";
           $hasPriceField = TRUE;
         }
       }
-      if(!$hasPriceField) {
+      if (!$hasPriceField) {
         $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it does not use a Price Set containing the configured CPPT Price Field; you should resolve this conflict before continuing.');
       }
 
@@ -192,12 +192,14 @@ AND cc.sort_name LIKE '%$name%'";
       'sequential' => 1,
       'membership_id' => $membership['id'],
       'return' => 'contribution_id.contribution_status_id',
-      'contribution_id.contribution_status_id' => ['IN' => [
-        2, //'Pending',
-        5, //'In Progress',
-        6, //'Overdue',
-        8, //'Partially paid',
-      ]],
+      'contribution_id.contribution_status_id' => [
+        'IN' => [
+          2, //'Pending',
+          5, //'In Progress',
+          6, //'Overdue',
+          8, //'Partially paid',
+        ],
+      ],
     ]);
     if (!$count) {
       return FALSE;
@@ -206,7 +208,7 @@ AND cc.sort_name LIKE '%$name%'";
     // No criteria were FAILED; return TRUE.
     return TRUE;
   }
-  
+
   public static function membershipHasCompletedCurrentPayment($membership) {
     // Has completed current payment if they meet ALL of these criteria:
     // - Membership start and end dates are not identical; AND

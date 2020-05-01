@@ -13,8 +13,8 @@ use CRM_Cpptmembership_ExtensionUtil as E;
  */
 class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
 
-  static $settingFilter = array('group' => 'cpptmembership');
-  static $extensionName = 'com.joineryhq.cpptmembership';
+  private static $settingFilter = array('group' => 'cpptmembership');
+  private static $extensionName = 'com.joineryhq.cpptmembership';
   private $_submittedValues = array();
   private $_settings = array();
 
@@ -114,7 +114,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
    */
   public function validate() {
     $error = parent::validate();
-    $submittedMonthDay = CRM_Utils_Array::value('cpptmembership_cutoffMonthDayEnglish',$this->_submitValues);
+    $submittedMonthDay = CRM_Utils_Array::value('cpptmembership_cutoffMonthDayEnglish', $this->_submitValues);
     $formattedMonthDay = date('m-d', strtotime("2001-{$submittedMonthDay}"));
     if ($submittedMonthDay != $formattedMonthDay) {
       $this->setElementError('cpptmembership_cutoffMonthDayEnglish', E::ts('"Payment cut-off month and day" must be in the format MM-DD.'));
@@ -123,11 +123,11 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     $priceSetField = civicrm_api3('PriceField', 'get', [
       'sequential' => 1,
       'return' => ['price_set_id'],
-      'id' => CRM_Utils_Array::value('cpptmembership_priceFieldId',$this->_submitValues),
+      'id' => CRM_Utils_Array::value('cpptmembership_priceFieldId', $this->_submitValues),
     ]);
     if ($priceSetField['count']) {
       $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
-      $submittedContributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId',$this->_submitValues);
+      $submittedContributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $this->_submitValues);
       $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
       $queryParams = [
         '1' => [$submittedContributionPageId, 'Int'],
@@ -224,12 +224,11 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     }
   }
 
-
-  function getMembershipTypeOptions() {
+  private static function getMembershipTypeOptions() {
     return ['' => '- ' . E::ts('select') . ' -'] + CRM_Member_BAO_Membership::buildOptions('membership_type_id');
   }
 
-  function getContributionPageOptions() {
+  private static function getContributionPageOptions() {
     $contributionPages = CRM_Contribute_DAO_Contribution::buildOptions('contribution_page_id');
     $options = ['' => '- ' . E::ts('select') . ' -'];
     foreach ($contributionPages as $contributionPageId => $contributionPageTitle) {
@@ -238,7 +237,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     return $options;
   }
 
-  function getPriceFieldOptions() {
+  private static function getPriceFieldOptions() {
     $options = ['' => '- ' . E::ts('select') . ' -'];
     $result = civicrm_api3('PriceField', 'get', [
       'sequential' => 1,
@@ -253,15 +252,15 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     return $options;
   }
 
-  function getStatusOptions() {
+  private static function getStatusOptions() {
     return ['' => '- ' . E::ts('select') . ' -'] + CRM_Member_BAO_Membership::buildOptions('status_id');
   }
-  
+
   /**
    * Upon displaying the form (i.e., only if it's not being submitted now),
    * perform some checks on the configured Contribution Page to ensure it qualifies.
    */
-  function _verifySettingsOnFormLoad() {
+  private function _verifySettingsOnFormLoad() {
     if (!$this->_flagSubmitted) {
       $defaults = $this->setDefaultValues();
       if ($contributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $defaults)) {
@@ -272,4 +271,5 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
       }
     }
   }
+
 }

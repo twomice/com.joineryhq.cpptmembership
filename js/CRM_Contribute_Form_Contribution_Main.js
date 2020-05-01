@@ -1,3 +1,5 @@
+// jshint esversion: 6
+
 (function(ts) {
   CRM.$(function($) {
 
@@ -12,7 +14,7 @@
       if (countChecked) {
         $('div.crm-submit-buttons').show();
       }
-    }
+    };
 
     /**
      * JS change handler for "select a person" entityref field.
@@ -81,11 +83,13 @@
     $('div.cppt_organization-section div.content').append($('table#bhfe_table select#cppt_organization'));
     
     // Move membership checkboxes into  main table.
+    var orgId;
+    var membership;
     for (orgId in CRM.vars.cpptmembership.organizationMemberships) {
       var orgNamesSectionId = 'cppt_names-org-id-' + orgId;
-      $('div.cppt_names-section div.content').append('<div id="' + orgNamesSectionId + '" class="cppt_names-org"/>')
-      for (i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {
-        var membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
+      $('div.cppt_names-section div.content').append('<div id="' + orgNamesSectionId + '" class="cppt_names-org"/>');
+      for (var i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {
+        membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
         var checkboxId = 'cppt_mid_' + orgId + '_' + membership.id;
         $('#' + orgNamesSectionId).append($('table#bhfe_table input[type="checkbox"].cppt-member-org-' + orgId + '#' + checkboxId));
         $('#' + orgNamesSectionId).append($('label[for="' + checkboxId + '"]'));
@@ -100,8 +104,8 @@
     var paymentNotices = {};
     for (orgId in CRM.vars.cpptmembership.organizationMemberships) {
       paymentNotices[orgId] = {};
-      for (i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {      
-        var membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
+      for (var i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {      
+        membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
         if (membership.hasCompletedCurrentPayment) {
           paymentNotices[orgId].completed = true;
         }
@@ -112,9 +116,9 @@
           paymentNotices[orgId].unpayable = true;          
         }
         if (
-          paymentNotices[orgId].completed 
-          && paymentNotices[orgId].pending
-          && paymentNotices[orgId].unpayable
+          paymentNotices[orgId].completed && 
+          paymentNotices[orgId].pending && 
+          paymentNotices[orgId].unpayable
         ) {
           break;
         }
