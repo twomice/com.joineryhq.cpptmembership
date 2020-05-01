@@ -128,7 +128,7 @@
     // Create an explanation for currently paid members.
     $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-haspayment-notice">* Re-certification payment is current and need not be submitted.</p>');
     // Create an explanation for payment-pending members.
-    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-payment-pending-notice">&dagger; A payment already pending; you may wish to contact our office to complete that payment.</p>');
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-payment-pending-notice">&dagger; A payment is already pending; you may wish to contact our office to complete that payment.</p>');
     // Create an explanation for those whose payment situation is too outdated to handle here.
     $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-unpayable-notice">&Dagger; Please contact our office to rectify matters with regard to this certificate holder.</p>');
     // Create an explanation for no-members-found.
