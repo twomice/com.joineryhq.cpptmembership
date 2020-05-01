@@ -1,8 +1,6 @@
 <?php
 
 use CRM_Cpptmembership_ExtensionUtil as E;
-//    '' => 208,
-//    'cutoffMonthDayEnglish' => 'October 1',
 
 return array(
   'cpptmembership_cpptMembershipTypeId' => array(
@@ -68,25 +66,24 @@ return array(
     'title' => E::ts('Payment cut-off month and day'),
     'html_type' => 'Text',
     // Omitting this line causes the setting to be omitted from the Settings form:
-     'quick_form_type' => 'Element',
+    'quick_form_type' => 'Element',
     'X_form_rules_args' => array(
       array(ts('The field "Payment cut-off month and day" is required'), 'required'),
     ),
   ),
-  'cpptmembership_lockMembershipEndDate' => array(
+  'cpptmembership_statusId' => array(
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
-    'name' => 'cpptmembership_lockMembershipEndDate',
-    'type' => 'String',
+    'name' => 'cpptmembership_statusId',
+    'type' => 'Int',
     'add' => '5.0',
     'is_domain' => 1,
     'is_contact' => 0,
-    'description' => E::ts('If set, this will cause all memberships of the configured CPPT type to have an end date of the last day of the current year, in the specific case that the end date is attempted to be set to the last date of a future year.'),
-    'title' => E::ts('Lock end dates for CPPT memberships?'),
+    'description' => E::ts('If set, CPPT memberships will always have their status overridden to this value, any time they are updated. (This will not affect existing memberships until the next time they are updated.)'),
+    'title' => E::ts('Force CPPT membership to status'),
     'html_type' => 'Select',
-    'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getLockEndDateOptions',
     // Omitting this line causes the setting to be omitted from the Settings form:
-     'quick_form_type' => 'Element',
-    'default' => 1,
+    'quick_form_type' => 'Element',
+    'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getStatusOptions',
   ),
 );

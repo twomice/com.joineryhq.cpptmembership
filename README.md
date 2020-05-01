@@ -18,8 +18,6 @@ see the official CiviCRM documentation for instructions on [Manual installation 
 ## Usage
 
 * Once installed, configuration is at Administer > CiviMember > CPPT Recertification Page. 
-* By default, when attempting to change the end date on CPPT membership to the last day of 
-  a future year, the end date will be locked to the last day of the current year.
 
 ## Support
 This is a custom extension for CiviCRM, written for a specific site; it will have 

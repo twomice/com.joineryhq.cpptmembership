@@ -26,6 +26,7 @@
       $('div#pricesetTotal').hide();
       $('p#cppt-haspayment-notice').hide();
       $('p#cppt-payment-pending-notice').hide();
+      $('p#cppt-unpayable-notice').hide();
       $('p#cppt-no-members-notice').hide();
       
       if (orgId > 0) {
@@ -41,6 +42,9 @@
         }
         if (paymentNotices[orgId].pending) {
           $('p#cppt-payment-pending-notice').show();        
+        }
+        if (paymentNotices[orgId].unpayable) {
+          $('p#cppt-unpayable-notice').show();        
         }
         
         // Show explanation if ther are none entirely.
@@ -86,7 +90,7 @@
         $('#' + orgNamesSectionId).append($('table#bhfe_table input[type="checkbox"].cppt-member-org-' + orgId + '#' + checkboxId));
         $('#' + orgNamesSectionId).append($('label[for="' + checkboxId + '"]'));
         $('#' + orgNamesSectionId).append($('<br/>'));        
-        if (membership.hasCompletedPayment) {
+        if ($('input#' + checkboxId).attr('disabled')) {
           $('label[for="' + checkboxId + '"]').css('opacity', '0.5');
         }
       }
@@ -98,23 +102,32 @@
       paymentNotices[orgId] = {};
       for (i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {      
         var membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
-        if (membership.hasCompletedPayment) {
+        if (membership.hasCompletedCurrentPayment) {
           paymentNotices[orgId].completed = true;
         }
-        else if (membership.hasPayment) {
+        else if (membership.hasPendingCurrentPayment) {
           paymentNotices[orgId].pending = true;          
         }
-        if (paymentNotices[orgId].completed && paymentNotices[orgId].pending) {
+        else if (membership.paymentNeedsResolution) {
+          paymentNotices[orgId].unpayable = true;          
+        }
+        if (
+          paymentNotices[orgId].completed 
+          && paymentNotices[orgId].pending
+          && paymentNotices[orgId].unpayable
+        ) {
           break;
         }
       }
     }    
     
-    // Create an explanation for disabled members.
-    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-haspayment-notice">* Certificate holder is current and need not be renewed.</p>');
+    // Create an explanation for currently paid members.
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-haspayment-notice">* Re-certification payment is current and need not be submitted.</p>');
     // Create an explanation for payment-pending members.
-    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-payment-pending-notice">&dagger; Certificate holder has a payment already pending; you may wish to contact our office to complete that payment.</p>');
-    // Create an explanation for payment-pending members.
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-payment-pending-notice">&dagger; A payment already pending; you may wish to contact our office to complete that payment.</p>');
+    // Create an explanation for those whose payment situation is too outdated to handle here.
+    $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-unpayable-notice">&Dagger; Please contact our office to rectify matters with regard to this certificate holder.</p>');
+    // Create an explanation for no-members-found.
     $('div.cppt_names-section div.content').append('<p style="margin-top: 1em; display:none;" id="cppt-no-members-notice">This organization has no CPPT certificate holders on record.</p>');
 
     // Remove the bhfe table, which should be empty by now.

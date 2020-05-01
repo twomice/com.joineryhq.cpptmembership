@@ -4,34 +4,91 @@ require_once 'cpptmembership.civix.php';
 use CRM_Cpptmembership_ExtensionUtil as E;
 
 /**
+ * Implements hook_civicrm_post().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_post/
+ */
+function cpptmembership_civicrm_post($op, $objectName, $objectId, &$objectRef) {
+
+
+
+  if ($objectName == 'Contribution' && $op == 'edit') {
+    // We need to check contribution_page_id, but that may not be in $objectRef,
+    // so fetch the full contribution via BAO.
+    $contributionBao = new CRM_Contribute_BAO_Contribution();
+    $contributionBao->id = $objectId;
+    $contributionBao->find();
+    $contributionBao->fetch();
+    $contribution = $contributionBao->toArray();
+    // Don't boter unless there's a contribution_page_id, and the contribution is completed.
+    $completedContributionStatusID = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed');
+    if (
+      ($contributionPageId = CRM_Utils_Array::value('contribution_page_id', $contribution))
+      && (CRM_Utils_Array::value('contribution_status_id', $contribution) == $completedContributionStatusID)
+    ) {
+      // Don't bother unless the related contribution page is our configured CPPT page.
+      if ($contributionPageId ==  _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
+        // Figure out which CPPT memberships, if any, are associated with this payment.
+        $membershipPayment = civicrm_api3('MembershipPayment', 'get', [
+          'contribution_id' => $objectId,
+          'membership_id.membership_type_id' => _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId'),
+          'return' => ['membership_id.end_date', 'membership_id'],
+          'options' => ['limit' => 0],
+        ]);
+        // For each of these memberships, if the end_date is the last day of this year,
+        // that would only be because CiviCRM has set it that way automatically,
+        // according to its way of handling completed membership payments, which
+        // is to set the end date to the current membership period. No staff member
+        // should be setting CPPT membership end date to that value.
+        // So in that case, we know we should set it to the corret value, which
+        // is the last day in the period for which this payment was due. And we can
+        // know that based on the date of the contribution, because the payment
+        // page will only accept payments for contributions that need payment
+        // for the currently due period.
+        $lastDayOfThisYearTime = strtotime(date('Y') . '-12-31');
+        $membershipIdsToFix = [];
+        foreach ($membershipPayment['values'] as $value) {
+          $endDateTime = strtotime(CRM_Utils_Array::value('membership_id.end_date', $value));
+          if ($endDateTime == $lastDayOfThisYearTime) {
+            $membershipIdsToFix[] = CRM_Utils_Array::value('membership_id', $value);
+          }
+        }
+        if (!empty($membershipIdsToFix)) {
+          $paymentDuePeriodEndDate = CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(strtotime($contribution['receive_date']));
+          foreach ($membershipIdsToFix as $membershipId) {
+            $membership = civicrm_api3('Membership', 'create', [
+              'id' => $membershipId,
+              'end_date' => $paymentDuePeriodEndDate,
+            ]);
+          }
+        }
+
+//          also, we should block the "renew" action in the UI as much as possible on cppt memberships.
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_civicrm_pre().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_pre/
  */
 function cpptmembership_civicrm_pre($op, $objectName, $id, &$params) {
-  // Don't bother with anything here if CPPT end dates are not locked.
-  $lockEndDates = _cpptmembership_getSetting('cpptmembership_lockMembershipEndDate');
-  if (!$lockEndDates) {
-    return;
-  }
-  $cpptMembershipTypeId = _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId');
+  // For cppt memberships, we'll ensure the status is always overridden and
+  // always set to the status called for in settings.
   if ($objectName == 'Membership' && $op == 'edit') {
     $membership = civicrm_api3('Membership', 'getSingle', ['id' => $id]);
+    $cpptMembershipTypeId = _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId');
     if ($membership['membership_type_id'] == $cpptMembershipTypeId) {
-      // For cppt memberships, lock date to current year, under certain conditions.
-      // If they're trying to  set the end date...
-      if ($endDate = CRM_Utils_Array::value('end_date', $params)) {
-        // If the end date is Dec 31 of some year.
-        $endDateMonthDay = date('m-d', strtotime($endDate));
-        if ($endDateMonthDay == '12-31') {
-          // If the end date is in some future year ...
-          $currentYear = date('Y');
-          if (date('Y', strtotime($endDate)) > $currentYear) {
-            // Then set the end date to Dec 31 in the current year.
-            $params['end_date'] = date('Ymd', strtotime("$currentYear-12-31"));
-          }
-        }
+      if ($statusId = _cpptmembership_getSetting('cpptmembership_statusId')) {
+        // If the status id is set, override status and force to that status id.
+        $params['is_override'] = 1;
+        $params['status_override_end_date'] = '';
+        $params['status_id'] = $statusId;
       }
+      // Force member start date to member since, if available
+      $params['start_date'] = CRM_Utils_Array::value('join_date', $params, CRM_Utils_Array::value('join_date', $membership));
     }
   }
 }
@@ -127,15 +184,19 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
         $attributes = [
           'class' => "cppt-member cppt-member-org-{$orgId}",
         ];
-        $hasPaymentMarker = '';
-        if (CRM_Utils_Array::value('hasCompletedPayment', $membership)) {
-          $hasPaymentMarker = ' *';
+        $noteMarker = '';
+        if (CRM_Utils_Array::value('hasCompletedCurrentPayment', $membership)) {
+          $noteMarker = ' *';
           $attributes['disabled'] = 'disabled';
         }
-        elseif (CRM_Utils_Array::value('hasPayment', $membership)) {
-          $hasPaymentMarker = ' &dagger;';
+        elseif (CRM_Utils_Array::value('hasPendingCurrentPayment', $membership)) {
+          $noteMarker = ' &dagger;';
         }
-        $cppt_mid_checkboxes[] = $form->createElement('checkbox', "{$orgId}_{$membershipId}", NULL, "{$membership['contact_id.display_name']}$hasPaymentMarker", $attributes);
+        elseif (CRM_Utils_Array::value('paymentNeedsResolution', $membership)) {
+          $noteMarker = ' &Dagger;';
+          $attributes['disabled'] = 'disabled';
+        }
+        $cppt_mid_checkboxes[] = $form->createElement('checkbox', "{$orgId}_{$membershipId}", NULL, "{$membership['contact_id.display_name']}$noteMarker", $attributes);
      }
     }
     $form->addGroup($cppt_mid_checkboxes, 'cppt_mid', NULL, '<br />');
@@ -179,18 +240,6 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
 function _cpptmembership_getOrganizationMemberships($orgIds) {
   $organizationMemberships = [];
 
-  // Determine payent $cutoff as most recent Oct 1.
-  $now = time();
-  $monthDay = _cpptmembership_getSetting('cpptmembership_cutoffMonthDayEnglish');
-  $cutoffThisYear = strtotime($monthDay);
-  if ($now > $cutoffThisYear) {
-    $cutoff = $cutoffThisYear;
-  }
-  else {
-    $cutoff = strtotime("$monthDay -1 year");
-  }
-  $cutoffDateString = date('Y-m-d', $cutoff);
-
   // Fetch relevant memberships for each given org.
   foreach ($orgIds as $orgId) {
     $related = CRM_Cpptmembership_Utils::getPermissionedContacts($orgId, NULL, NULL, 'Individual');
@@ -203,7 +252,7 @@ function _cpptmembership_getOrganizationMemberships($orgIds) {
     // have 'view all contacts'. So we skip permissions checks.
     $apiParams['check_permissions'] = FALSE;
     $apiParams['membership_type_id'] = _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId');
-    $apiParams['return'] = ["contact_id.display_name", "contact_id.sort_name", "contact_id.id"];
+    $apiParams['return'] = ["contact_id.display_name", "contact_id.sort_name", "contact_id.id", "end_date", "start_date"];
     // Default to 0 limit.
     $apiParams['sequential'] = 1;
     $apiParams['options']['limit'] = 0;
@@ -212,28 +261,9 @@ function _cpptmembership_getOrganizationMemberships($orgIds) {
 
     // Note whether each membership has a payment after the cutoff date.
     foreach ($memberships['values'] as &$value) {
-      $payments = civicrm_api3('MembershipPayment', 'get', [
-        'sequential' => 1,
-        'membership_id' => $value['id'],
-        'return' => 'contribution_id.contribution_status_id',
-        'contribution_id.receive_date' => ['>=' => $cutoffDateString],
-        'contribution_id.contribution_status_id' => ['IN' => [
-          1, //'Completed',
-          2, //'Pending',
-          5, //'In Progress',
-          6, //'Overdue',
-          8, //'Partially paid',
-        ]],
-      ]);
-      if ($payments['count']) {
-        $value['hasPayment'] = TRUE;
-        foreach ($payments['values'] as $payment) {
-          if ($payment['contribution_id.contribution_status_id'] == 1) {
-            $value['hasCompletedPayment'] = TRUE;
-            break;
-          }
-        }
-      }
+      $value['hasCompletedCurrentPayment'] = CRM_Cpptmembership_Utils::membershipHasCompletedCurrentPayment($value);
+      $value['hasPendingCurrentPayment'] = CRM_Cpptmembership_Utils::membershipHasPendingCurrentPayment($value);
+      $value['paymentNeedsResolution'] = CRM_Cpptmembership_Utils::membershipPaymentNeedsResolution($value);
     }
     $organizationMemberships[$orgId] = $memberships['values'];
   }
@@ -403,7 +433,8 @@ function _cpptmembership_getSetting($settingName) {
 function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
   $paidMemberships = [];
   if ($orgId = CRM_Utils_Array::value('cppt_organization', $formValues)) {
-    foreach (array_keys($formValues['cppt_mid']) as $mid) {
+    $mids = CRM_Utils_Array::value('cppt_mid', $formValues, []);
+    foreach (array_keys($mids) as $mid) {
       list($mid_orgId, $mid_membershipId) = explode('_', $mid);
       if ($mid_orgId == $orgId) {
         $membership = civicrm_api3('Membership', 'get', [

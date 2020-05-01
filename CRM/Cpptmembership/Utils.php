@@ -145,4 +145,109 @@ AND cc.sort_name LIKE '%$name%'";
     }
     return $warnings;
   }
+
+  public static function membershipPaymentNeedsResolution($membership) {
+    // Needs resolution UNLESS they are IN AT LEAST ONE of these categories:
+    // - membership "end date" is for the period prior to the currently due period; OR
+    // - membership start and end dates are identical, and the end date is within the currently due period.
+    //
+
+    // We will return FALSE as soon as we meet one of these criteria, or TRUE if none are met.
+
+    $currentlyDueEndDate = self::getCurrentlyDueEndDate();
+    $previouslyDueEndDate = date('Y-m-d', strtotime('-1 year', strtotime($currentlyDueEndDate)));
+    // Criteria: membership "end date" is for the period prior to the currently due period;
+    if ($membership["end_date"] == $previouslyDueEndDate) {
+      return FALSE;
+    }
+
+    // Criteria: membership start and end dates are identical, and the end date is within the currently due period.
+    if ($membership['start_date'] == $membership['end_date']) {
+      $endTime = strtotime($membership['end_date']);
+      $currentlyDueEndTime = strtotime($currentlyDueEndDate);
+      $previouslyDueEndTime = strtotime($previouslyDueEndDate);
+      if ($endTime > $previouslyDueEndTime && $endTime <= $currentlyDueEndDate) {
+        return FALSE;
+      }
+    }
+
+    // No criteria were met; return TRUE.
+    return TRUE;
+  }
+
+  public static function membershipHasPendingCurrentPayment($membership) {
+    // Has current pending payment, if they meet ALL of these criteria:
+    // - Is not membershipPaymentNeedsResolution(); AND
+    // - Has a payment with 'pending' status.
+
+    // We will return FALSE as soon as we FAIL one of these criteria, or TRUE if none are FAILED.
+
+    // Criteria: Is not membershipPaymentNeedsResolution();
+    if (self::membershipPaymentNeedsResolution($membership)) {
+      return FALSE;
+    }
+
+    // Criteria: Has a payment with 'pending' status.
+    $count = civicrm_api3('MembershipPayment', 'getCount', [
+      'sequential' => 1,
+      'membership_id' => $membership['id'],
+      'return' => 'contribution_id.contribution_status_id',
+      'contribution_id.contribution_status_id' => ['IN' => [
+        2, //'Pending',
+        5, //'In Progress',
+        6, //'Overdue',
+        8, //'Partially paid',
+      ]],
+    ]);
+    if (!$count) {
+      return FALSE;
+    }
+
+    // No criteria were FAILED; return TRUE.
+    return TRUE;
+  }
+  
+  public static function membershipHasCompletedCurrentPayment($membership) {
+    // Has completed current payment if they meet ALL of these criteria:
+    // - Membership start and end dates are not identical; AND
+    // - Membership end date is equal to the currently due period.
+
+    // We will return FALSE as soon as we FAIL one of these criteria, or TRUE if none are FAILED.
+
+    // Criteria: Membership start and end dates are not identical
+    if ($membership['start_date'] == $membership['end_date']) {
+      return FALSE;
+    }
+
+    // Criteria: Membership end date is equal to the currently due period.
+    if ($membership['end_date'] != self::getCurrentlyDueEndDate()) {
+      return FALSE;
+    }
+
+    // No criteria were FAILED; return TRUE.
+    return TRUE;
+  }
+
+  /**
+   * Get end date for currently due period in format 'Y-m-d'
+   * (this format is suitable for mysql and strtotime().)
+   *
+   * @param Int $now time() value for the relevant date. If omitted, the current time() is used.
+   * @return String date in format 'Y-m-d'
+   */
+  public static function getCurrentlyDueEndDate($now = FALSE) {
+    // Determine payent $cutoff as most recent cutoff day.
+    if (!$now) {
+      $now = time();
+    }
+    $cutoffThisYearFormatted = date('Y') . '-' . _cpptmembership_getSetting('cpptmembership_cutoffMonthDayEnglish');
+    $cutoffThisYearTime = strtotime($cutoffThisYearFormatted);
+    if ($now >= $cutoffThisYearTime) {
+      return date('Y') . '-12-31';
+    }
+    else {
+      return (date('Y') - 1) . '-12-31';
+    }
+  }
+
 }
