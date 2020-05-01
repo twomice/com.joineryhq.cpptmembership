@@ -17,51 +17,14 @@ function cpptmembership_civicrm_post($op, $objectName, $objectId, &$objectRef) {
     $contributionBao->find();
     $contributionBao->fetch();
     $contribution = $contributionBao->toArray();
-    // Don't boter unless there's a contribution_page_id, and the contribution is completed.
-    $completedContributionStatusID = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed');
+    // Don't botHer unless there's a contribution_page_id, and the related
+    // contribution page is our configured CPPT page.
     if (
       ($contributionPageId = CRM_Utils_Array::value('contribution_page_id', $contribution))
-      && (CRM_Utils_Array::value('contribution_status_id', $contribution) == $completedContributionStatusID)
-    ) {
-      // Don't bother unless the related contribution page is our configured CPPT page.
-      if ($contributionPageId == _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
-        // Figure out which CPPT memberships, if any, are associated with this payment.
-        $membershipPayment = civicrm_api3('MembershipPayment', 'get', [
-          'contribution_id' => $objectId,
-          'membership_id.membership_type_id' => _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId'),
-          'return' => ['membership_id.end_date', 'membership_id'],
-          'options' => ['limit' => 0],
-        ]);
-        // For each of these memberships, if the end_date is the last day of this year,
-        // that would only be because CiviCRM has set it that way automatically,
-        // according to its way of handling completed membership payments, which
-        // is to set the end date to the current membership period. No staff member
-        // should be setting CPPT membership end date to that value.
-        // So in that case, we know we should set it to the corret value, which
-        // is the last day in the period for which this payment was due. And we can
-        // know that based on the date of the contribution, because the payment
-        // page will only accept payments for contributions that need payment
-        // for the currently due period.
-        $lastDayOfThisYearTime = strtotime(date('Y') . '-12-31');
-        $membershipIdsToFix = [];
-        foreach ($membershipPayment['values'] as $value) {
-          $endDateTime = strtotime(CRM_Utils_Array::value('membership_id.end_date', $value));
-          if ($endDateTime == $lastDayOfThisYearTime) {
-            $membershipIdsToFix[] = CRM_Utils_Array::value('membership_id', $value);
-          }
-        }
-        if (!empty($membershipIdsToFix)) {
-          $paymentDuePeriodEndDate = CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(strtotime($contribution['receive_date']));
-          foreach ($membershipIdsToFix as $membershipId) {
-            $membership = civicrm_api3('Membership', 'create', [
-              'id' => $membershipId,
-              'end_date' => $paymentDuePeriodEndDate,
-            ]);
-          }
-        }
-
-        // TODO: also, we should block the "renew" action in the UI as much as possible on cppt memberships.
-      }
+      && ($contributionPageId == _cpptmembership_getSetting('cpptmembership_cpptContributionPageId'))
+    ){
+      CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contribution, TRUE);
+      // TODO: also, we should block the "renew" action in the UI as much as possible on cppt memberships.
     }
   }
 }
@@ -147,6 +110,7 @@ function cpptmembership_civicrm_postProcess($formName, $form) {
         'membership_id' => $paidMembershipId,
       ]);
     }
+    CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contributionId);
   }
 }
 

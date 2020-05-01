@@ -28,7 +28,7 @@ class CRM_Cpptmembership_Utils {
     $relationshipTypeClause = $contactTypeClause = '';
 
     if ($relTypeId) {
-      // @todo relTypeId is only ever passed in as an int. Change this to reflect that -
+      // @to-do relTypeId is only ever passed in as an int. Change this to reflect that -
       // probably being overly conservative by not doing so but working on stable release.
       $relationshipTypeClause = 'AND cr.relationship_type_id IN (%2) ';
       $args[2] = [$relTypeId, 'String'];
@@ -249,6 +249,90 @@ AND cc.sort_name LIKE '%$name%'";
     }
     else {
       return (date('Y') - 1) . '-12-31';
+    }
+  }
+
+  public static function correctMembershipDatesForCpptContribution($contribution, $checkEndDate = FALSE) {
+    // If $contribution is numeric, we assume it's a contribution ID. Load the
+    // contribution from the database as an array.
+    if (is_numeric($contribution)) {
+      $contributionBao = new CRM_Contribute_BAO_Contribution();
+      $contributionBao->id = $contribution;
+      $contributionBao->find();
+      $contributionBao->fetch();
+      $contribution = $contributionBao->toArray();
+    }
+    $completedContributionStatusID = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed');
+    if (CRM_Utils_Array::value('contribution_status_id', $contribution) != $completedContributionStatusID) {
+      // contribution is not completed; there's nothing to do here. just return.
+      return;
+    }
+
+    $contributionId = $contribution['id'];
+    // Figure out which CPPT memberships, if any, are associated with this contribution.
+    $membershipPayment = civicrm_api3('MembershipPayment', 'get', [
+      'contribution_id' => $contributionId,
+      'membership_id.membership_type_id' => _cpptmembership_getSetting('cpptmembership_cpptMembershipTypeId'),
+      'return' => ['membership_id.end_date', 'membership_id'],
+      'options' => ['limit' => 0],
+    ]);
+    // At this point, we know which cppt memberships (if any) are associated with
+    // this contribution. But we're still not sure if we need to correct the date.
+    // It depends on whether or not civicrm has already incremented the date wrongly,
+    // and THAT depends on whether civicrm was IN A POSITION to make that change.
+    // That's why we need $checkEndDate.
+    //
+    // $checkEndDate is TRUE when we're coming from the _post hook on 'contribution' 'edit'.
+    // At that point in the execution, civicrm MAY have known about the membership, or
+    // maybe not. (This is because we create the membershipPayment records in the _postProcess
+    // hook for the contribution page, which fires AFTER the _post hook on 'contribution' 'edit'.
+    // For a credit card payment, this means the completed contribution already
+    // passes through _post hook on 'contribution' 'edit' before the membershipPayment
+    // records are created. But on a 'pay later' contribution, the contribution is
+    // not set to 'completed' until sometime later by manual editing, which is
+    // of course a long time after the CPPT form is submitted, so of course at that
+    // point the membershipPayment records were already created.) So when coming
+    // from the _post hook on 'contribution' 'edit', we need to check the date,
+    // because within that hook we can't tell if we have a credit card contribution
+    // on the spot, or a 'pay later' contribution being completed days later.
+    // In this case, for each of these memberships, if the end_date is the last day of this year,
+    // that would only be because CiviCRM has set it that way automatically,
+    // according to its way of handling completed membership payments, which
+    // is to set the end date to the current membership period. No staff member
+    // should be setting CPPT membership end date to that value.
+    // So in that case, we know we should set it to the corret value, which
+    // is the last day in the period for which this payment was due. And we can
+    // know that based on the date of the contribution, because the payment
+    // page will only accept payments for contributions that need payment
+    // for the currently due period.
+    //
+    // $checkEndDate is FALSE when we're coming from the _postProcess hook for
+    // the contribution. At that point we know we've already created the membershipPayment
+    // records, but we can't tell if we have a credit card contribution on the spot,
+    // or a 'pay later' contribution to be completed days later. However, if it was
+    // a 'pay later', we won't even get this far, because we already returned (above)
+    // if the contribution status is not 'completed'. So if we're here and $checkEndDate
+    // is FALSE, then we know we've just completed a credit card payment immediately
+    // upon submitting the contribution page; therefore we can be confident that
+    // the end date should be set to the last date of the currently due period,
+    // regardless of what the current end_date is.
+    //
+    $lastDayOfThisYearTime = strtotime(date('Y') . '-12-31');
+    $membershipIdsToFix = [];
+    foreach ($membershipPayment['values'] as $value) {
+      $endDateTime = strtotime(CRM_Utils_Array::value('membership_id.end_date', $value));
+      if (!$checkEndDate || $endDateTime == $lastDayOfThisYearTime) {
+        $membershipIdsToFix[] = CRM_Utils_Array::value('membership_id', $value);
+      }
+    }
+    if (!empty($membershipIdsToFix)) {
+      $paymentDuePeriodEndDate = CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(strtotime($contribution['receive_date']));
+      foreach ($membershipIdsToFix as $membershipId) {
+        $membership = civicrm_api3('Membership', 'create', [
+          'id' => $membershipId,
+          'end_date' => $paymentDuePeriodEndDate,
+        ]);
+      }
     }
   }
 
