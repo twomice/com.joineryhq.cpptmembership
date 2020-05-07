@@ -9,7 +9,7 @@
      */
     var cpptUpdateTotal = function cpptUpdateTotal(e) {
       var countChecked = $('input[type="checkbox"].cppt-member:checked:visible').length;
-      $('div.other_amount-section div.other_amount-content input[type="text"][id^="price_"]').val(countChecked).keyup();
+      $('div#priceset input[type="text"][id^="price_"]').val(countChecked).keyup();
       $('div.crm-submit-buttons').hide();
       if (countChecked) {
         $('div.crm-submit-buttons').show();
@@ -142,8 +142,8 @@
 
     //  hide not-you message:
     $('div.crm-not-you-message').hide();
-    //  hide other amount section:
-    $('div.other_amount-section').hide(); 
+    //  hide priceset:
+    $('div#priceset').hide();
     $('div.cppt_names-section').hide();
     $('div#pricesetTotal').hide();
     // Set change hanler for 'cppt_organization'
