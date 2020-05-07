@@ -93,6 +93,11 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
  */
 function cpptmembership_civicrm_postProcess($formName, $form) {
   if ($formName == 'CRM_Contribute_Form_Contribution_Confirm') {
+    // Only do this for cppt contribution page.
+    $contributionPageId = $form->getVar('_id');
+    if ($contributionPageId != _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
+      return;
+    }
     $contributionId = $form->_contributionID;
     $cpptPrice = _cpptmembership_getCpptPrice();
     $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_params);
@@ -412,8 +417,13 @@ function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
 }
 
 function _cpptmembership_getCpptPrice() {
-  $priceFieldValue = civicrm_api3('priceFieldValue', 'getSingle', [
-    'price_field_id' => _cpptmembership_getSetting('cpptmembership_priceFieldId'),
-  ]);
-  return CRM_Utils_Array::value('amount', $priceFieldValue);
+  $amount = 0;
+  $priceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
+  if ($priceFieldId) {
+    $priceFieldValue = civicrm_api3('priceFieldValue', 'getSingle', [
+      'price_field_id' => $priceFieldId,
+    ]);
+    $amount = CRM_Utils_Array::value('amount', $priceFieldValue);
+  }
+  return $amount;
 }
