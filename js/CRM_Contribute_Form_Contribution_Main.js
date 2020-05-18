@@ -59,20 +59,19 @@
       cpptUpdateTotal();
     };
         
-    $('div.email-5-section').after(`
-      <div class="crm-public-form-item crm-section cppt_organization-section">
-        <div class="label"></div>
-        <div class="content">
-        </div>
-        <div class="clear"></div>
-      </div>
-      <div class="crm-public-form-item crm-section cppt_names-section">
-        <div class="label">Members to renew</div>
-        <div class="content">
-        </div>
-        <div class="clear"></div>
-      </div>
-    `);
+    $('div.email-5-section').after('<div class="crm-public-form-item crm-section cppt_organization-section">\
+        <div class="label"></div>\
+        <div class="content">\
+        </div>\
+        <div class="clear"></div>\
+      </div>\
+      <div class="crm-public-form-item crm-section cppt_names-section">\
+        <div class="label">Members to renew</div>\
+        <div class="content">\
+        </div>\
+        <div class="clear"></div>\
+      </div>\
+    ');
     $('div.cppt_names-section').after($('div#pricesetTotal'));
 
     // Give the bhfe elements table an id so we can handle it later.
