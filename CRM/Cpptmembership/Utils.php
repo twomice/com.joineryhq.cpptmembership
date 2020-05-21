@@ -149,24 +149,23 @@ AND cc.sort_name LIKE '%$name%'";
   public static function membershipPaymentNeedsResolution($membership) {
     // Needs resolution UNLESS they are IN AT LEAST ONE of these categories:
     // - membership "end date" is for the period prior to the currently due period; OR
-    // - membership start and end dates are identical, and the end date is within the currently due period.
-    //
+    // - membership start and end dates are identical, and the end date is within the previously due period.
 
     // We will return FALSE as soon as we meet one of these criteria, or TRUE if none are met.
 
     $currentlyDueEndDate = self::getCurrentlyDueEndDate();
-    $previouslyDueEndDate = date('Y-m-d', strtotime('-1 year', strtotime($currentlyDueEndDate)));
+    $previouslyDueEndDate = date('Y-m-d', strtotime("$currentlyDueEndDate - 1 year"));
     // Criteria: membership "end date" is for the period prior to the currently due period;
     if ($membership["end_date"] == $previouslyDueEndDate) {
       return FALSE;
     }
 
-    // Criteria: membership start and end dates are identical, and the end date is within the currently due period.
+    // Criteria: membership start and end dates are identical, and the end date is within the previously due period.
     if ($membership['start_date'] == $membership['end_date']) {
-      $endTime = strtotime($membership['end_date']);
-      $currentlyDueEndTime = strtotime($currentlyDueEndDate);
-      $previouslyDueEndTime = strtotime($previouslyDueEndDate);
-      if (($endTime > $previouslyDueEndTime) && ($endTime <= $currentlyDueEndTime)) {
+      $maxEndDateTime = strtotime($previouslyDueEndDate);
+      $minEndDateTime = strtotime("$previouslyDueEndDate - 1 year");
+      $endDateTime = strtotime($membership['end_date']);
+      if (($endDateTime > $minEndDateTime && $endDateTime <= $maxEndDateTime)) {
         return FALSE;
       }
     }
@@ -210,24 +209,32 @@ AND cc.sort_name LIKE '%$name%'";
   }
 
   public static function membershipHasCompletedCurrentPayment($membership) {
-    // Has completed current payment if they meet ALL of these criteria:
-    // - Membership start and end dates are not identical; AND
-    // - Membership end date is equal to the currently due period.
+    // Has completed current payment if ANY of these criteria are met:
+    // - end date is at the end of the currently due period.
+    // - start and end date are identical and within the currently due period.
+    $currentlyDueEndDate = self::getCurrentlyDueEndDate();
 
-    // We will return FALSE as soon as we FAIL one of these criteria, or TRUE if none are FAILED.
+    // We will return TRUE  as soon as we meet one of these critiera, or FALSE if none are met.
 
-    // Criteria: Membership start and end dates are not identical
+    // Criteria: end date is at the end of the currently due period.
+    if ($membership['end_date'] == $currentlyDueEndDate) {
+      echo "{$membership['contact_id.id']}: end date is at the end of the currently due period.<br />";
+      return TRUE;
+    }
+
+    // Criteria: start and end date are identical and within the currently due period.
     if ($membership['start_date'] == $membership['end_date']) {
-      return FALSE;
+      $maxEndDateTime = strtotime($currentlyDueEndDate);
+      $minEndDateTime = strtotime("$currentlyDueEndDate - 1 year");
+      $endDateTime = strtotime($membership['end_date']);
+      if ($endDateTime > $minEndDateTime && $endDateTime <= $maxEndDateTime) {
+        echo "{$membership['contact_id.id']}: start and end date are identical and within the currently due period.<br />";
+        return TRUE;
+      }
     }
 
-    // Criteria: Membership end date is equal to the currently due period.
-    if ($membership['end_date'] != self::getCurrentlyDueEndDate()) {
-      return FALSE;
-    }
-
-    // No criteria were FAILED; return TRUE.
-    return TRUE;
+    // No crtiera were met; return FALSE.
+    return FALSE;
   }
 
   /**
