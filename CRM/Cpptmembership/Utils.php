@@ -218,7 +218,6 @@ AND cc.sort_name LIKE '%$name%'";
 
     // Criteria: end date is at the end of the currently due period.
     if ($membership['end_date'] == $currentlyDueEndDate) {
-      echo "{$membership['contact_id.id']}: end date is at the end of the currently due period.<br />";
       return TRUE;
     }
 
@@ -228,7 +227,6 @@ AND cc.sort_name LIKE '%$name%'";
       $minEndDateTime = strtotime("$currentlyDueEndDate - 1 year");
       $endDateTime = strtotime($membership['end_date']);
       if ($endDateTime > $minEndDateTime && $endDateTime <= $maxEndDateTime) {
-        echo "{$membership['contact_id.id']}: start and end date are identical and within the currently due period.<br />";
         return TRUE;
       }
     }
