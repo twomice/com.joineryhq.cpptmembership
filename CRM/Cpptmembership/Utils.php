@@ -193,10 +193,14 @@ AND cc.sort_name LIKE '%$name%'";
       'return' => 'contribution_id.contribution_status_id',
       'contribution_id.contribution_status_id' => [
         'IN' => [
-          2, //'Pending',
-          5, //'In Progress',
-          6, //'Overdue',
-          8, //'Partially paid',
+          //'Pending',
+          2,
+          //'In Progress',
+          5,
+          //'Overdue',
+          6,
+          //'Partially paid',
+          8,
         ],
       ],
     ]);
