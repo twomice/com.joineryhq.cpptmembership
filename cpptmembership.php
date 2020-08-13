@@ -22,7 +22,7 @@ function cpptmembership_civicrm_post($op, $objectName, $objectId, &$objectRef) {
     if (
       ($contributionPageId = CRM_Utils_Array::value('contribution_page_id', $contribution))
       && ($contributionPageId == _cpptmembership_getSetting('cpptmembership_cpptContributionPageId'))
-    ){
+    ) {
       CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contribution, TRUE);
       // TODO: also, we should block the "renew" action in the UI as much as possible on cppt memberships.
     }

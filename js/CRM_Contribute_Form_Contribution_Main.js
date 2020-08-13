@@ -58,7 +58,7 @@
       }
       cpptUpdateTotal();
     };
-        
+    /* jshint multistr: true */
     $('div.email-5-section').after('<div class="crm-public-form-item crm-section cppt_organization-section">\
         <div class="label"></div>\
         <div class="content">\
@@ -103,8 +103,8 @@
     var paymentNotices = {};
     for (orgId in CRM.vars.cpptmembership.organizationMemberships) {
       paymentNotices[orgId] = {};
-      for (var i in CRM.vars.cpptmembership.organizationMemberships[orgId]) {      
-        membership = CRM.vars.cpptmembership.organizationMemberships[orgId][i];
+      for (var j in CRM.vars.cpptmembership.organizationMemberships[orgId]) {      
+        membership = CRM.vars.cpptmembership.organizationMemberships[orgId][j];
         if (membership.hasCompletedCurrentPayment) {
           paymentNotices[orgId].completed = true;
         }
