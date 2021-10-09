@@ -22,7 +22,7 @@ function cpptmembership_civicrm_post($op, $objectName, $objectId, &$objectRef) {
     if (
       ($contributionPageId = CRM_Utils_Array::value('contribution_page_id', $contribution))
       && ($contributionPageId == _cpptmembership_getSetting('cpptmembership_cpptContributionPageId'))
-    ){
+    ) {
       CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contribution, TRUE);
       // TODO: also, we should block the "renew" action in the UI as much as possible on cppt memberships.
     }
@@ -391,6 +391,23 @@ function cpptmembership_civicrm_navigationMenu(&$menu) {
   _cpptmembership_civix_navigationMenu($menu);
 }
 
+/**
+ * Implements hook_civicrm_alterContent().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_alterContent
+ */
+function cpptmembership_civicrm_pageRun($page) {
+  $pageName = $page->getVar('_name');
+  if ($pageName == 'CRM_Contact_Page_View_UserDashBoard') {
+    // Strip Active Memberships of any CPPT-type memberships.
+    $activeMembers = _cpptmembership_strip_cppt_memberships($page->get_template_vars('activeMembers'));
+    $page->assign('activeMembers', $activeMembers);
+    // Strip Inactive Memberships of any CPPT-type memberships.
+    $inactiveMembers = _cpptmembership_strip_cppt_memberships($page->get_template_vars('inactiveMembers'));
+    $page->assign('inactiveMembers', $inactiveMembers);
+  }
+}
+
 function _cpptmembership_getSetting($settingName) {
   return Civi::settings()->get($settingName);
 }
@@ -426,4 +443,20 @@ function _cpptmembership_getCpptPrice() {
     $amount = CRM_Utils_Array::value('amount', $priceFieldValue);
   }
   return $amount;
+}
+
+/**
+ * Remove any CPPT-type memberships from a given array of membership records.
+ *
+ * @param Array $memberships An array of memberships; each membership is expected
+ *  to have an element 'membership_type' containing the value of civicrm_membership_type.name
+ * @return Array The contents of $memberships with CPPT-type memberships removed.
+ */
+function _cpptmembership_strip_cppt_memberships($memberships) {
+  foreach ($memberships as $id => $membership) {
+    if ($membership['membership_type'] == 'CPPT') {
+      unset($memberships[$id]);
+    }
+  }
+  return $memberships;
 }

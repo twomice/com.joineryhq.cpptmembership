@@ -5,6 +5,12 @@ Provides special handling of a properly configured contribution page, for specif
 features relevant to FPPTA, to wit: to allow for multiple CPPT re-certifications 
 to be submitted (and paid) at once.
 
+Also, provides these specific customizations in CiviCRM behavior:
+
+* On the CiviCRM user dashboard (https://drupal.example.org/civicrm/user), under
+the Memberships section:
+  * Rows displaying data for memberships of type "CPPT" will be hidden.
+
 ## Requirements
 
 * PHP v7.0+
