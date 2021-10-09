@@ -17,7 +17,7 @@ return array(
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getMembershipTypeOptions',
     'X_form_rules_args' => array(
-      array(ts('The field "Membership Type" is required'), 'required'),
+      array(E::ts('The field "Membership Type" is required'), 'required'),
     ),
   ),
   'cpptmembership_cpptContributionPageId' => array(
@@ -34,7 +34,7 @@ return array(
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getContributionPageOptions',
     'X_form_rules_args' => array(
-      array(ts('The field "Contribution Page" is required'), 'required'),
+      array(E::ts('The field "Contribution Page" is required'), 'required'),
     ),
   ),
   'cpptmembership_priceFieldId' => array(
@@ -51,7 +51,7 @@ return array(
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getPriceFieldOptions',
     'X_form_rules_args' => array(
-      array(ts('The field "Price Field" is required'), 'required'),
+      array(E::ts('The field "Price Field" is required'), 'required'),
     ),
   ),
   'cpptmembership_cutoffMonthDayEnglish' => array(
@@ -68,7 +68,7 @@ return array(
     // Omitting this line causes the setting to be omitted from the Settings form:
     'quick_form_type' => 'Element',
     'X_form_rules_args' => array(
-      array(ts('The field "Payment cut-off month and day" is required'), 'required'),
+      array(E::ts('The field "Payment cut-off month and day" is required'), 'required'),
     ),
   ),
   'cpptmembership_statusId' => array(

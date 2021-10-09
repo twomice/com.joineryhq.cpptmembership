@@ -36,25 +36,32 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
         switch ($setting['html_type']) {
           case 'Select':
             $this->add(
-              $setting['html_type'], // field type
-              $setting['name'], // field name
-              $setting['title'], // field label
+              // field type
+              $setting['html_type'],
+              // field name
+              $setting['name'],
+              // field label
+              $setting['title'],
               $this->getSettingOptions($setting), NULL, CRM_Utils_Array::value('html_attributes', $setting)
             );
             break;
 
           case 'CheckBox':
             $this->addCheckBox(
-              $setting['name'], // field name
-              $setting['title'], // field label
+              // field name
+              $setting['name'],
+              // field label
+              $setting['title'],
               array_flip($this->getSettingOptions($setting))
             );
             break;
 
           case 'Radio':
             $this->addRadio(
-              $setting['name'], // field name
-              $setting['title'], // field label
+              // field name
+              $setting['name'],
+              // field label
+              $setting['title'],
               $this->getSettingOptions($setting)
             );
             break;
@@ -62,15 +69,15 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
           default:
             $add = 'add' . $setting['quick_form_type'];
             if ($add == 'addElement') {
-              $this->$add($setting['html_type'], $name, ts($setting['title']), CRM_Utils_Array::value('html_attributes', $setting, array()));
+              $this->$add($setting['html_type'], $name, E::ts($setting['title']), CRM_Utils_Array::value('html_attributes', $setting, array()));
             }
             else {
-              $this->$add($name, ts($setting['title']));
+              $this->$add($name, E::ts($setting['title']));
             }
             break;
         }
       }
-      $descriptions[$setting['name']] = ts($setting['description']);
+      $descriptions[$setting['name']] = E::ts($setting['description']);
 
       if (!empty($setting['X_form_rules_args'])) {
         $rules_args = (array) $setting['X_form_rules_args'];
@@ -85,7 +92,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     $this->addButtons(array(
       array(
         'type' => 'submit',
-        'name' => ts('Submit'),
+        'name' => E::ts('Submit'),
         'isDefault' => TRUE,
       ),
     ));
@@ -195,7 +202,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     $unsettings = array_fill_keys(array_keys(array_diff_key($settings, $this->_submittedValues)), NULL);
     civicrm_api3('setting', 'create', $unsettings);
 
-    CRM_Core_Session::setStatus(" ", ts('Settings saved.'), "success");
+    CRM_Core_Session::setStatus(" ", E::ts('Settings saved.'), "success");
   }
 
   /**
