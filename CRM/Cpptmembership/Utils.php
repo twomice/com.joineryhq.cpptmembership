@@ -179,7 +179,7 @@ AND cc.sort_name LIKE '%$name%'";
 
   public static function membershipPaymentNeedsResolution($membership) {
     // Needs resolution UNLESS they are IN AT LEAST ONE of these categories:
-    // - membership "end date" is for the period prior to the currently due period; OR
+    // - membership "end date" is before the currently due period; OR
     // - membership start and end dates are identical, and the end date is within the previously due period.
 
     // We will return FALSE as soon as we meet one of these criteria, or TRUE if none are met.
@@ -193,8 +193,11 @@ AND cc.sort_name LIKE '%$name%'";
     }
     $currentlyDueEndDate = self::getCurrentlyDueEndDate(FALSE, $billingPolicy);
     $previouslyDueEndDate = date('Y-m-d', strtotime("$currentlyDueEndDate - 1 year"));
-    // Criteria: membership "end date" is for the period prior to the currently due period;
-    if ($membership["end_date"] == $previouslyDueEndDate) {
+    // Criteria: membership "end date" is before the period prior to the currently due period,
+    // i.e., they're more than one year out of date. (If current period is 2020,
+    // we can accept renewals for memberships ending in 2019, but not for those
+    // ending in 2018 or earlier).
+    if ($membership["end_date"] >= $previouslyDueEndDate) {
       return FALSE;
     }
 
@@ -252,22 +255,22 @@ AND cc.sort_name LIKE '%$name%'";
 
   public static function membershipHasCompletedCurrentPayment($membership) {
     // Has completed current payment if ANY of these criteria are met:
-    // - end date is at the end of the currently due period.
+    // - end date is at the end of (or after) the currently due period.
     // - start and end date are identical and within the currently due period.
 
-    // If 'in-arrears' price field is set, billing policy is 'in arrears', otherwise it's 'current-period'
-    if (_cpptmembership_getSetting('cpptmembership_priceFieldId')) {
-      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS;
+    // If 'current-period' price field is set, billing policy is 'current-period', otherwise it's 'in-arrears'
+    if (_cpptmembership_getSetting('cpptmembership_currentPriceFieldId')) {
+      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_CURRENT;
     }
     else {
-      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_CURRENT;
+      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS;
     }
     $currentlyDueEndDate = self::getCurrentlyDueEndDate(FALSE, $billingPolicy);
 
     // We will return TRUE  as soon as we meet one of these critiera, or FALSE if none are met.
 
-    // Criteria: end date is at the end of the currently due period.
-    if ($membership['end_date'] == $currentlyDueEndDate) {
+    // Criteria: end date is at the end of (or after) the currently due period.
+    if ($membership['end_date'] >= $currentlyDueEndDate) {
       return TRUE;
     }
 
