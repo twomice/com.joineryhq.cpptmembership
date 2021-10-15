@@ -127,24 +127,18 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
       $this->setElementError('cpptmembership_cutoffMonthDayEnglish', E::ts('"Payment cut-off month and day" must be in the format MM-DD.'));
     }
 
-    $priceSetField = civicrm_api3('PriceField', 'get', [
-      'sequential' => 1,
-      'return' => ['price_set_id'],
-      'id' => CRM_Utils_Array::value('cpptmembership_priceFieldId', $this->_submitValues),
-    ]);
-    if ($priceSetField['count']) {
-      $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
-      $submittedContributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $this->_submitValues);
-      $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
-      $queryParams = [
-        '1' => [$submittedContributionPageId, 'Int'],
-        '2' => [$priceSetId, 'Int'],
-      ];
-      $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
-      if (!$dao->N) {
-        $this->setElementError('cpptmembership_priceFieldId', E::ts('This Price Field is not part of the Price Set configured for the given Contribution Page.'));
-      }
+    // Ensure at least one price field is specified:
+    if (
+      !CRM_Utils_Array::value('cpptmembership_priceFieldId', $this->_submitValues)
+      && !CRM_Utils_Array::value('cpptmembership_currentPriceFieldId', $this->_submitValues)
+    ) {
+      $requirePriceFieldErrorMessage = E::ts('You must define at least one price field.');
+      $this->setElementError('cpptmembership_priceFieldId', $requirePriceFieldErrorMessage);
+      $this->setElementError('cpptmembership_currentPriceFieldId', $requirePriceFieldErrorMessage);
     }
+
+    $this->_validatePriceField('cpptmembership_priceFieldId');
+    $this->_validatePriceField('cpptmembership_currentPriceFieldId');
 
     return (0 == count($this->_errors));
   }
@@ -235,6 +229,10 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     return ['' => '- ' . E::ts('select') . ' -'] + CRM_Member_BAO_Membership::buildOptions('membership_type_id');
   }
 
+  private static function getSoftCreditTypeOptions() {
+    return ['' => '- ' . E::ts('select') . ' -'] + CRM_Contribute_BAO_ContributionSoft::buildOptions('soft_credit_type_id');
+  }
+
   private static function getContributionPageOptions() {
     $contributionPages = CRM_Contribute_DAO_Contribution::buildOptions('contribution_page_id');
     $options = ['' => '- ' . E::ts('select') . ' -'];
@@ -275,6 +273,31 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
         foreach ($warnings as $warning) {
           CRM_Core_Session::setStatus($warning, NULL, NULL, ['expires' => 0]);
         }
+      }
+    }
+  }
+
+  private function _validatePriceField($priceFieldSettingName) {
+    $priceFieldId = CRM_Utils_Array::value($priceFieldSettingName, $this->_submitValues);
+    if (empty($priceFieldId)) {
+      return;
+    }
+    $priceSetField = civicrm_api3('PriceField', 'get', [
+      'sequential' => 1,
+      'return' => ['price_set_id'],
+      'id' => $priceFieldId,
+    ]);
+    if ($priceSetField['count']) {
+      $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
+      $submittedContributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $this->_submitValues);
+      $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
+      $queryParams = [
+        '1' => [$submittedContributionPageId, 'Int'],
+        '2' => [$priceSetId, 'Int'],
+      ];
+      $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
+      if (!$dao->N) {
+        $this->setElementError($priceFieldSettingName, E::ts('This Price Field is not part of the Price Set configured for the given Contribution Page.'));
       }
     }
   }

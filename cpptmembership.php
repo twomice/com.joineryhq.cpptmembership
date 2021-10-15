@@ -3,6 +3,9 @@
 require_once 'cpptmembership.civix.php';
 use CRM_Cpptmembership_ExtensionUtil as E;
 
+define('CPPTMEMBERSHIP_BILLING_POLICY_ARREARS', 1);
+define('CPPTMEMBERSHIP_BILLING_POLICY_CURRENT', 2);
+
 /**
  * Implements hook_civicrm_post().
  *
@@ -68,17 +71,39 @@ function cpptmembership_civicrm_buildAmount($pageType, &$form, &$amounts) {
     // This form has not been submitted, so there's nothing to do.
     return;
   }
-  // Define the label.
-  $label = E::ts('CPPT Recertification for: ');
+
+  $memberNamesLabel = '';
   $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_submitValues);
-  $priceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
   if (!empty($paidMemberships)) {
     $memberNames = [];
     foreach ($paidMemberships as $member) {
       $memberNames[] = $member['contact_id.display_name'];
     }
-    $label .= implode(', ', $memberNames);
-    foreach ($amounts[$priceFieldId]['options'] as &$option) {
+    $memberNamesLabel = implode(', ', $memberNames);
+  }
+
+  // Define the label for in-arrears price field, if it's in use..
+  $inArrearsPriceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
+  if ($inArrearsPriceFieldId && !empty($memberNamesLabel) && !empty($amounts[$inArrearsPriceFieldId])) {
+    $label = E::ts('CPPT Recertification (in arrears for %1) for: %2', [
+      '1' => CRM_Utils_Date::customFormat(CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(FALSE, CPPTMEMBERSHIP_BILLING_POLICY_ARREARS), '%Y'),
+      '2' => $memberNamesLabel,
+    ]);
+    foreach ($amounts[$inArrearsPriceFieldId]['options'] as &$option) {
+      $option['label'] = $label;
+      // There should be only one, so break here.
+      break;
+    }
+  }
+
+  // Define the label for current-period price field, if it's in use..
+  $currentPriceFieldId = _cpptmembership_getSetting('cpptmembership_currentPriceFieldId');
+  if ($currentPriceFieldId && !empty($memberNamesLabel) && !empty($amounts[$currentPriceFieldId])) {
+    $label = E::ts('CPPT Recertification (current period for %1) for: %2', [
+      '1' => CRM_Utils_Date::customFormat(CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(FALSE, CPPTMEMBERSHIP_BILLING_POLICY_CURRENT), '%Y'),
+      '2' => $memberNamesLabel,
+    ]);
+    foreach ($amounts[$currentPriceFieldId]['options'] as &$option) {
       $option['label'] = $label;
       // There should be only one, so break here.
       break;
@@ -99,22 +124,25 @@ function cpptmembership_civicrm_postProcess($formName, $form) {
       return;
     }
     $contributionId = $form->_contributionID;
-    $cpptPrice = _cpptmembership_getCpptPrice();
     $paidMemberships = _cpptmembership_getPaidMembershipsFromFormValues($form->_params);
+    // Create soft credits for in-arrears billing, if in-arrears is in use.
+    if ($cpptPrice = _cpptmembership_getCpptPrice(CPPTMEMBERSHIP_BILLING_POLICY_ARREARS)) {
+      _cpptmembership_createSoftCredits($paidMemberships, $contributionId, $cpptPrice, CPPTMEMBERSHIP_BILLING_POLICY_ARREARS);
+    }
+    // Create soft credits for curent-period billing, if current-period is in use.
+    if ($cpptPrice = _cpptmembership_getCpptPrice(CPPTMEMBERSHIP_BILLING_POLICY_CURRENT)) {
+      _cpptmembership_createSoftCredits($paidMemberships, $contributionId, $cpptPrice, CPPTMEMBERSHIP_BILLING_POLICY_CURRENT);
+    }
+
+    // Create membership payment links to each membership
     foreach ($paidMemberships as $paidMembershipId => $paidMembership) {
-      // Create soft credit to contact
-      $contributionSoft = civicrm_api3('ContributionSoft', 'create', [
-        'contribution_id' => $contributionId,
-        'contact_id' => $paidMembership['contact_id.id'],
-        'amount' => $cpptPrice,
-        'soft_credit_type_id' => 1,
-      ]);
       // Create membership payment
       $membershipPayment = civicrm_api3('MembershipPayment', 'create', [
         'contribution_id' => $contributionId,
         'membership_id' => $paidMembershipId,
       ]);
     }
+    // FIXME: we don't know if we should correct for in-arrears dates or current-period dates. Need to add logic for this.
     CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contributionId);
   }
 }
@@ -130,6 +158,17 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $contributionPageId = $form->getVar('_id');
     if ($contributionPageId != _cpptmembership_getSetting('cpptmembership_cpptContributionPageId')) {
       return;
+    }
+    $warnings = CRM_Cpptmembership_Utils::getContributionPageConfigWarnings($contributionPageId);
+    if (!empty($warnings)) {
+      throw new CRM_Core_Exception(
+        E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it is not properly configured. Please notify the site administrators that the contribution page configuration should be modified.'),
+        'cpptmembership_form_misconfiguration',
+        [
+          'contribution_page_id' => $contributionPageId,
+          'Warnings from CRM_Cpptmembership_Utils::getContributionPageConfigWarnings' => $warnings,
+        ]
+      );
     }
 
     //  Define array to store variables for passing to JS.
@@ -433,14 +472,24 @@ function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
   return $paidMemberships;
 }
 
-function _cpptmembership_getCpptPrice() {
+function _cpptmembership_getCpptPrice($billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS) {
   $amount = 0;
-  $priceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
-  if ($priceFieldId) {
-    $priceFieldValue = civicrm_api3('priceFieldValue', 'getSingle', [
-      'price_field_id' => $priceFieldId,
-    ]);
-    $amount = CRM_Utils_Array::value('amount', $priceFieldValue);
+  $settingName = '';
+  if ($billingPolicy == CPPTMEMBERSHIP_BILLING_POLICY_ARREARS) {
+    $settingName = 'cpptmembership_priceFieldId';
+  }
+  elseif ($billingPolicy == CPPTMEMBERSHIP_BILLING_POLICY_CURRENT) {
+    $settingName = 'cpptmembership_currentPriceFieldId';
+  }
+
+  if ($settingName) {
+    $priceFieldId = _cpptmembership_getSetting($settingName);
+    if ($priceFieldId) {
+      $priceFieldValue = civicrm_api3('priceFieldValue', 'getSingle', [
+        'price_field_id' => $priceFieldId,
+      ]);
+      $amount = CRM_Utils_Array::value('amount', $priceFieldValue);
+    }
   }
   return $amount;
 }
@@ -459,4 +508,25 @@ function _cpptmembership_strip_cppt_memberships($memberships) {
     }
   }
   return $memberships;
+}
+
+function _cpptmembership_createSoftCredits($paidMemberships, $contributionId, $cpptPrice, $billingPolicy) {
+  if ($billingPolicy == CPPTMEMBERSHIP_BILLING_POLICY_ARREARS) {
+    $softCreditTypeId = _cpptmembership_getSetting('cpptmembership_arrearsSoftCreditType');
+  }
+  elseif ($billingPolicy == CPPTMEMBERSHIP_BILLING_POLICY_CURRENT) {
+    $softCreditTypeId = _cpptmembership_getSetting('cpptmembership_currentSoftCreditType');
+  }
+  else {
+    return;
+  }
+  foreach ($paidMemberships as $paidMembershipId => $paidMembership) {
+    // Create soft credit to contact
+    $contributionSoft = civicrm_api3('ContributionSoft', 'create', [
+      'contribution_id' => $contributionId,
+      'contact_id' => $paidMembership['contact_id.id'],
+      'amount' => $cpptPrice,
+      'soft_credit_type_id' => $softCreditTypeId,
+    ]);
+  }
 }

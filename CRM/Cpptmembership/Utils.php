@@ -117,32 +117,63 @@ AND cc.sort_name LIKE '%$name%'";
         $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but is also configured with "Membership Section Enabled?"; you should resolve this conflict before continuing.');
       }
 
-      // Price set should contain the configured price field.
-      $priceSetField = civicrm_api3('PriceField', 'get', [
-        'sequential' => 1,
-        'is_active' => 1,
-        'is_enter_qty' => 1,
-        'return' => ['price_set_id'],
-        'id' => _cpptmembership_getSetting('cpptmembership_priceFieldId'),
-      ]);
-      $hasPriceField = FALSE;
-      if ($priceSetField['count']) {
-        $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
-        $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
-        $queryParams = [
-          '1' => [$contributionPageId, 'Int'],
-          '2' => [$priceSetId, 'Int'],
-        ];
-        $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
-        if ($dao->N) {
-          $hasPriceField = TRUE;
+      // Price set should contain the configured "in arrears" price field.
+      $inArrearsPriceFieldId = _cpptmembership_getSetting('cpptmembership_priceFieldId');
+      if ($inArrearsPriceFieldId) {
+        $priceSetField = civicrm_api3('PriceField', 'get', [
+          'sequential' => 1,
+          'is_active' => 1,
+          'is_enter_qty' => 1,
+          'return' => ['price_set_id'],
+          'id' => $inArrearsPriceFieldId,
+        ]);
+        $hasPriceField = FALSE;
+        if ($priceSetField['count']) {
+          $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
+          $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
+          $queryParams = [
+            '1' => [$contributionPageId, 'Int'],
+            '2' => [$priceSetId, 'Int'],
+          ];
+          $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
+          if ($dao->N) {
+            $hasPriceField = TRUE;
+          }
+        }
+        if (!$hasPriceField) {
+          $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it does not use a Price Set containing the configured CPPT "In Arrears" Price Field; you should resolve this conflict before continuing.');
         }
       }
-      if (!$hasPriceField) {
-        $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it does not use a Price Set containing the configured CPPT Price Field; you should resolve this conflict before continuing.');
-      }
 
+      // Price set should contain the configured "current period" price field.
+      $currentPriceFieldId = _cpptmembership_getSetting('cpptmembership_currentPriceFieldId');
+      if ($currentPriceFieldId) {
+        $priceSetField = civicrm_api3('PriceField', 'get', [
+          'sequential' => 1,
+          'is_active' => 1,
+          'is_enter_qty' => 1,
+          'return' => ['price_set_id'],
+          'id' => $currentPriceFieldId,
+        ]);
+        $hasPriceField = FALSE;
+        if ($priceSetField['count']) {
+          $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
+          $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
+          $queryParams = [
+            '1' => [$contributionPageId, 'Int'],
+            '2' => [$priceSetId, 'Int'],
+          ];
+          $dao = CRM_Core_DAO::executeQuery($query, $queryParams);
+          if ($dao->N) {
+            $hasPriceField = TRUE;
+          }
+        }
+        if (!$hasPriceField) {
+          $warnings[] = E::ts('This Contribution Page is selected under "CPPT Recertification Page", but it does not use a Price Set containing the configured CPPT "Current Period" Price Field; you should resolve this conflict before continuing.');
+        }
+      }
     }
+
     return $warnings;
   }
 
@@ -153,7 +184,14 @@ AND cc.sort_name LIKE '%$name%'";
 
     // We will return FALSE as soon as we meet one of these criteria, or TRUE if none are met.
 
-    $currentlyDueEndDate = self::getCurrentlyDueEndDate();
+    // If 'in-arrears' price field is set, billing policy is 'in arrears', otherwise it's 'current-period'
+    if (_cpptmembership_getSetting('cpptmembership_priceFieldId')) {
+      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS;
+    }
+    else {
+      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_CURRENT;
+    }
+    $currentlyDueEndDate = self::getCurrentlyDueEndDate(FALSE, $billingPolicy);
     $previouslyDueEndDate = date('Y-m-d', strtotime("$currentlyDueEndDate - 1 year"));
     // Criteria: membership "end date" is for the period prior to the currently due period;
     if ($membership["end_date"] == $previouslyDueEndDate) {
@@ -216,7 +254,15 @@ AND cc.sort_name LIKE '%$name%'";
     // Has completed current payment if ANY of these criteria are met:
     // - end date is at the end of the currently due period.
     // - start and end date are identical and within the currently due period.
-    $currentlyDueEndDate = self::getCurrentlyDueEndDate();
+
+    // If 'in-arrears' price field is set, billing policy is 'in arrears', otherwise it's 'current-period'
+    if (_cpptmembership_getSetting('cpptmembership_priceFieldId')) {
+      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS;
+    }
+    else {
+      $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_CURRENT;
+    }
+    $currentlyDueEndDate = self::getCurrentlyDueEndDate(FALSE, $billingPolicy);
 
     // We will return TRUE  as soon as we meet one of these critiera, or FALSE if none are met.
 
@@ -244,21 +290,28 @@ AND cc.sort_name LIKE '%$name%'";
    * (this format is suitable for mysql and strtotime().)
    *
    * @param Int $now time() value for the relevant date. If omitted, the current time() is used.
+   * @param Int $billingPolicy Either CPPTMEMBERSHIP_BILLING_POLICY_ARREARS or CPPTMEMBERSHIP_BILLING_POLICY_CURRENT.
    * @return String date in format 'Y-m-d'
    */
-  public static function getCurrentlyDueEndDate($now = FALSE) {
+  public static function getCurrentlyDueEndDate($now = FALSE, $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS) {
     // Determine payent $cutoff as most recent cutoff day.
     if (!$now) {
       $now = time();
     }
+    // Start by calculating the date for "in arrears" billing.
     $cutoffThisYearFormatted = date('Y') . '-' . _cpptmembership_getSetting('cpptmembership_cutoffMonthDayEnglish');
     $cutoffThisYearTime = strtotime($cutoffThisYearFormatted);
     if ($now >= $cutoffThisYearTime) {
-      return date('Y') . '-12-31';
+      $year = date('Y');
     }
     else {
-      return (date('Y') - 1) . '-12-31';
+      $year = date('Y') - 1;
     }
+    // If we're billing for "current-period", the period is one year more than for "in arrears"
+    if ($billingPolicy == CPPTMEMBERSHIP_BILLING_POLICY_CURRENT) {
+      $year++;
+    }
+    return "{$year}-12-31";
   }
 
   public static function correctMembershipDatesForCpptContribution($contribution, $checkEndDate = FALSE) {
@@ -335,7 +388,20 @@ AND cc.sort_name LIKE '%$name%'";
       }
     }
     if (!empty($membershipIdsToFix)) {
-      $paymentDuePeriodEndDate = CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(strtotime($contribution['receive_date']));
+      // Determine whether this contribution has a "current-period" line item.
+      // If so, we'll set the date based on "current-period" billing; otherwise, based on "in-arrears" billing.
+      $lineItemCount = civicrm_api3('lineItem', 'getCount', [
+        'check_permissions' => FALSE,
+        'contribution_id' => $contribution['id'],
+        'price_field_id' => _cpptmembership_getSetting('cpptmembership_currentPriceFieldId'),
+      ]);
+      if ($lineItemCount) {
+        $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_CURRENT;
+      }
+      else {
+        $billingPolicy = CPPTMEMBERSHIP_BILLING_POLICY_ARREARS;
+      }
+      $paymentDuePeriodEndDate = CRM_Cpptmembership_Utils::getCurrentlyDueEndDate(strtotime($contribution['receive_date']), $billingPolicy);
       foreach ($membershipIdsToFix as $membershipId) {
         $membership = civicrm_api3('Membership', 'create', [
           'id' => $membershipId,
