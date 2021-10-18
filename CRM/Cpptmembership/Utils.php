@@ -178,11 +178,14 @@ AND cc.sort_name LIKE '%$name%'";
   }
 
   public static function membershipPaymentNeedsResolution($membership) {
-    // Needs resolution UNLESS they are IN AT LEAST ONE of these categories:
-    // - membership "end date" is before the currently due period; OR
+    $needsResolution = TRUE;
+    // In certain situations, the membership needs resolution and should not be able to renew online.
+    // Most people are not like this, but we start by assuming they are, and we only
+    // allow them to renew online if they meet at least one of these criteria:
+    // - membership "end date" is the last day of the period prior to the currently due period;
+    //    this represents people who are renewing normally and on time.
     // - membership start and end dates are identical, and the end date is within the previously due period.
-
-    // We will return FALSE as soon as we meet one of these criteria, or TRUE if none are met.
+    //    this represents people who were added manually by staff and should not be elligible to renew online.
 
     // If 'in-arrears' price field is set, billing policy is 'in arrears', otherwise it's 'current-period'
     if (_cpptmembership_getSetting('cpptmembership_priceFieldId')) {
@@ -193,26 +196,28 @@ AND cc.sort_name LIKE '%$name%'";
     }
     $currentlyDueEndDate = self::getCurrentlyDueEndDate(FALSE, $billingPolicy);
     $previouslyDueEndDate = date('Y-m-d', strtotime("$currentlyDueEndDate - 1 year"));
-    // Criteria: membership "end date" is before the period prior to the currently due period,
-    // i.e., they're more than one year out of date. (If current period is 2020,
-    // we can accept renewals for memberships ending in 2019, but not for those
+    // Criteria: membership "end date" is the last day of the period prior to the currently due period;
+    // i.e., they're exactly one year out of date. (If current period is 2020,
+    // we only accept renewals for memberships ending on the last day of 2019, but not for those
     // ending in 2018 or earlier).
-    if ($membership["end_date"] >= $previouslyDueEndDate) {
-      return FALSE;
+    if ($membership["end_date"] == $previouslyDueEndDate) {
+      $needsResolution = FALSE;
     }
 
-    // Criteria: membership start and end dates are identical, and the end date is within the previously due period.
-    if ($membership['start_date'] == $membership['end_date']) {
-      $maxEndDateTime = strtotime($previouslyDueEndDate);
-      $minEndDateTime = strtotime("$previouslyDueEndDate - 1 year");
-      $endDateTime = strtotime($membership['end_date']);
-      if (($endDateTime > $minEndDateTime && $endDateTime <= $maxEndDateTime)) {
-        return FALSE;
+    if ($needsResolution) {
+    // They still haven't met one of the qualifications. So see if they meet the next one:
+      // Criteria: membership start and end dates are identical, and the end date is within the previously due period.
+      if ($membership['start_date'] == $membership['end_date']) {
+        $maxEndDateTime = strtotime($previouslyDueEndDate);
+        $minEndDateTime = strtotime("$previouslyDueEndDate - 1 year");
+        $endDateTime = strtotime($membership['end_date']);
+        if (($endDateTime > $minEndDateTime && $endDateTime <= $maxEndDateTime)) {
+          $needsResolution = FALSE;
+        }
       }
     }
 
-    // No criteria were met; return TRUE.
-    return TRUE;
+    return $needsResolution;
   }
 
   public static function membershipHasPendingCurrentPayment($membership) {
