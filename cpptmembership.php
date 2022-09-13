@@ -142,6 +142,20 @@ function cpptmembership_civicrm_postProcess($formName, $form) {
         'membership_id' => $paidMembershipId,
       ]);
     }
+
+    // If fpptaqb exension is enabled and configured, update the aopropriate
+    // custom field as configured in the '"Custom "Donating Organization" field for contributions'
+    // setting.
+    if (CRM_Extension_System::singleton()->getManager()->getStatus('com.joineryhq.fpptaqb') == CRM_Extension_Manager::STATUS_INSTALLED) {
+      $customFieldId = Civi::settings()->get('fpptaqb_cf_id_contribution');
+      if ($customFieldId && ($form->_params['cppt_organization'] ?? NULL)) {
+        civicrm_api3('Contribution', 'create', [
+          'id' => $contributionId,
+          'custom_' . $customFieldId => $form->_params['cppt_organization'],
+        ]);
+      }
+    }
+
     // FIXME: we don't know if we should correct for in-arrears dates or current-period dates. Need to add logic for this.
     CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contributionId);
   }
