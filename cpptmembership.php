@@ -189,12 +189,13 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $jsVars = [];
 
     $contactId = CRM_Core_Session::singleton()->getLoggedInContactID();
-    $organizations = CRM_Cpptmembership_Utils::getPermissionedContacts($contactId, NULL, NULL, 'Organization');
+    $permissionedOrganizations = CRM_Cpptmembership_Utils::getPermissionedContacts($contactId, NULL, NULL, 'Organization');
+    $currentOrganizations = CRM_Cpptmembership_Utils::filterEffectivelyCurrentOrganizations($permissionedOrganizations);
 
-    $organizationOptions = ['' => '- ' . E::ts('select') . ' -'] + CRM_Utils_Array::collect('name', $organizations);
+    $organizationOptions = ['' => '- ' . E::ts('select') . ' -'] + CRM_Utils_Array::collect('name', $currentOrganizations);
     $form->add('select', 'cppt_organization', E::ts('Renew for Organization'), $organizationOptions);
 
-    $organizationMemberships = _cpptmembership_getOrganizationMemberships(array_keys($organizations));
+    $organizationMemberships = _cpptmembership_getOrganizationMemberships(array_keys($currentOrganizations));
     $jsVars['organizationMemberships'] = $organizationMemberships;
     $cppt_mid_checkboxes = [];
     foreach ($organizationMemberships as $orgId => $memberships) {

@@ -205,7 +205,7 @@ AND cc.sort_name LIKE '%$name%'";
     }
 
     if ($needsResolution) {
-    // They still haven't met one of the qualifications. So see if they meet the next one:
+      // They still haven't met one of the qualifications. So see if they meet the next one:
       // Criteria: membership start and end dates are identical, and the end date is within the previously due period.
       if ($membership['start_date'] == $membership['end_date']) {
         $maxEndDateTime = strtotime($previouslyDueEndDate);
@@ -417,6 +417,74 @@ AND cc.sort_name LIKE '%$name%'";
         ]);
       }
     }
+  }
+
+  /**
+   * For a given set of "cppt_organization" select options, filter those options
+   * down to only organizations having an effectively-current membership. I.e.
+   * the membership must have an is_current_member status, or it must have a
+   * 'pending' payment on file.
+   *
+   * @param array $organizationOptions An array of select-list values for organizations,
+   *   as returned by CRM_Cpptmembership_Utils::getPermissionedContacts().
+   * @return array The filtered options.
+   */
+  public static function filterEffectivelyCurrentOrganizations($organizationOptions) {
+    $orgContactIds = array_keys($organizationOptions);
+
+    // Define an empty set of organizations found to be effectively current.
+    $currentOrgContactIds = [];
+
+    // We'll only return organizations that have a primary membership which:
+    //  is current, OR has a pending payment.
+    $memberships = \Civi\Api4\Membership::get()
+      ->setCheckPermissions(FALSE)
+      ->addWhere('owner_membership_id', 'IS NULL')
+      ->addWhere('contact_id', 'IN', $orgContactIds)
+      ->setLimit(0)
+      ->addChain('membership_status', \Civi\Api4\MembershipStatus::get()
+        ->setCheckPermissions(FALSE)
+        ->addWhere('id', '=', '$status_id'),
+      0)
+      ->execute();
+    // Define a set of membership IDs which are not in 'current' status.
+    $notCurrentMembershipIdToOrgId = [];
+    foreach ($memberships as $membership) {
+      // If membership status is current, the org is effectively current.
+      if ($membership['membership_status']['is_current_member']) {
+        $currentOrgContactIds[] = $membership['contact_id'];
+      }
+      else {
+        $notCurrentMembershipIdToOrgId[$membership['id']] = $membership['contact_id'];
+      }
+    }
+
+    // If $notCurrentMembershipIds is empty, that means all orgs are effectively
+    // current, so we need do nothing more. Otherwise, we need to check those
+    // $notCurrentMembershipIds to see if they have a pending payment; if they
+    // do, the org is effectively current.
+    if (!empty($notCurrentMembershipIdToOrgId)) {
+      $membershipPaymentGet = civicrm_api3('MembershipPayment', 'get', [
+        'sequential' => 1,
+        'membership_id' => ['IN' => array_keys($notCurrentMembershipIdToOrgId)],
+        'api.Contribution.get' => ['id' => "\$value.contribution_id", 'contribution_status_id' => "pending"],
+        'api.Contact.get' => ['id' => "\$value.contribution_id", 'contribution_status_id' => "pending"],
+      ]);
+      foreach ($membershipPaymentGet['values'] as $membershipPayment) {
+        if ($membershipPayment['api.Contribution.get']['count']) {
+          // There's at least one pending payment on this membership; so we know
+          // membership is effectively current.
+          $membershipId = $membershipPayment['membership_id'];
+          $currentOrgContactIds[] = $notCurrentMembershipIdToOrgId[$membershipId];
+        }
+      }
+    }
+
+    $ret = [];
+    foreach ($currentOrgContactIds as $currentOrgContactId) {
+      $ret[$currentOrgContactId] = $organizationOptions[$currentOrgContactId];
+    }
+    return $ret;
   }
 
 }

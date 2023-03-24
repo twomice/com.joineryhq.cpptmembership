@@ -149,5 +149,16 @@
     $('select#cppt_organization').change(cpptOrganizationChange);
     cpptOrganizationChange();
 
+    // If there are no organizaitons avilable for CPPT renewal, hide entire form
+    // and display a status message to this effect.
+    if (CRM.$('select#cppt_organization option').length == 1) {
+      var noCurrentMembersMessage = ts('None of your organizations have a current membership. (This page is for renewing CPPT cerfication for people at organizations with a current membership.)');
+      CRM.$('div.crm-contribution-main-form-block').hide();
+      CRM.$('div.crm-contribution-main-form-block').before('\
+          <div class="status">\
+            <p><i class="crm-i fa-exclamation-triangle"></i> ' + noCurrentMembersMessage + '</p>\
+          </div>\
+      ');
+    }
   });
 }(CRM.ts('com.joineryhq.cpptmembership')));
