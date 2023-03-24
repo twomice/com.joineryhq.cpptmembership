@@ -430,6 +430,9 @@ AND cc.sort_name LIKE '%$name%'";
    * @return array The filtered options.
    */
   public static function filterEffectivelyCurrentOrganizations($organizationOptions) {
+    if (empty($organizationOptions)) {
+      return $organizationOptions;
+    }
     $orgContactIds = array_keys($organizationOptions);
 
     // Define an empty set of organizations found to be effectively current.
