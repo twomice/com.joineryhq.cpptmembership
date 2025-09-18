@@ -156,7 +156,7 @@
       CRM.$('div.crm-contribution-main-form-block').hide();
       CRM.$('div.crm-contribution-main-form-block').before('\
           <div class="status">\
-            <p><i class="crm-i fa-exclamation-triangle"></i> ' + noCurrentMembersMessage + '</p>\
+            <p><i class="crm-i fa-exclamation-triangle" role="img" aria-hidden="true"></i> ' + noCurrentMembersMessage + '</p>\
           </div>\
       ');
     }
