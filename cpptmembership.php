@@ -227,7 +227,7 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
     $element->setLabel(E::ts('Your email address'));
 
     $template = CRM_Core_Smarty::singleton();
-    $bhfe = $template->get_template_vars('beginHookFormElements');
+    $bhfe = $template->getTemplateVars('beginHookFormElements');
     if (!$bhfe) {
       $bhfe = [];
     }
@@ -454,10 +454,10 @@ function cpptmembership_civicrm_pageRun($page) {
   $pageName = $page->getVar('_name');
   if ($pageName == 'CRM_Contact_Page_View_UserDashBoard') {
     // Strip Active Memberships of any CPPT-type memberships.
-    $activeMembers = _cpptmembership_strip_cppt_memberships($page->get_template_vars('activeMembers'));
+    $activeMembers = _cpptmembership_strip_cppt_memberships($page->getTemplateVars('activeMembers'));
     $page->assign('activeMembers', $activeMembers);
     // Strip Inactive Memberships of any CPPT-type memberships.
-    $inactiveMembers = _cpptmembership_strip_cppt_memberships($page->get_template_vars('inactiveMembers'));
+    $inactiveMembers = _cpptmembership_strip_cppt_memberships($page->getTemplateVars('inactiveMembers'));
     $page->assign('inactiveMembers', $inactiveMembers);
   }
 }
