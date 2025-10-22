@@ -42,7 +42,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
               $setting['name'],
               // field label
               $setting['title'],
-              $this->getSettingOptions($setting), NULL, CRM_Utils_Array::value('html_attributes', $setting)
+              $this->getSettingOptions($setting), NULL, $setting['html_attributes'] ?? []
             );
             break;
 
@@ -121,7 +121,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
    */
   public function validate() {
     $error = parent::validate();
-    $submittedMonthDay = CRM_Utils_Array::value('cpptmembership_cutoffMonthDayEnglish', $this->_submitValues);
+    $submittedMonthDay = $this->_submitValues['cpptmembership_cutoffMonthDayEnglish'] ?? NULL;
     $formattedMonthDay = date('m-d', strtotime("2001-{$submittedMonthDay}"));
     if ($submittedMonthDay != $formattedMonthDay) {
       $this->setElementError('cpptmembership_cutoffMonthDayEnglish', E::ts('"Payment cut-off month and day" must be in the format MM-DD.'));
@@ -211,7 +211,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
         'return' => array_keys($this->_settings),
         'sequential' => 1,
       ));
-      $ret = CRM_Utils_Array::value(0, $result['values']);
+      $ret = $result['values'][0] ?? NULL;
     }
     return $ret;
   }
@@ -268,7 +268,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
   private function _verifySettingsOnFormLoad() {
     if (!$this->_flagSubmitted) {
       $defaults = $this->setDefaultValues();
-      if ($contributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $defaults)) {
+      if ($contributionPageId = $defaults['cpptmembership_cpptContributionPageId'] ?? NULL) {
         $warnings = CRM_Cpptmembership_Utils::getContributionPageConfigWarnings($contributionPageId);
         foreach ($warnings as $warning) {
           CRM_Core_Session::setStatus($warning, NULL, NULL, ['expires' => 0]);
@@ -278,7 +278,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
   }
 
   private function _validatePriceField($priceFieldSettingName) {
-    $priceFieldId = CRM_Utils_Array::value($priceFieldSettingName, $this->_submitValues);
+    $priceFieldId = $this->_submitValues[$priceFieldSettingName] ?? NULL;
     if (empty($priceFieldId)) {
       return;
     }
@@ -288,8 +288,8 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
       'id' => $priceFieldId,
     ]);
     if ($priceSetField['count']) {
-      $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
-      $submittedContributionPageId = CRM_Utils_Array::value('cpptmembership_cpptContributionPageId', $this->_submitValues);
+      $priceSetId = $priceSetField['values'][0]['price_set_id'] ?? NULL;
+      $submittedContributionPageId = $this->_submitValues['cpptmembership_cpptContributionPageId'] ?? NULL;
       $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
       $queryParams = [
         '1' => [$submittedContributionPageId, 'Int'],

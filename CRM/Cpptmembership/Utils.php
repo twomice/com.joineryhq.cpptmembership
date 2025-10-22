@@ -129,7 +129,7 @@ AND cc.sort_name LIKE '%$name%'";
         ]);
         $hasPriceField = FALSE;
         if ($priceSetField['count']) {
-          $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
+          $priceSetId = $priceSetField['values'][0]['price_set_id'] ?? NULL;
           $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
           $queryParams = [
             '1' => [$contributionPageId, 'Int'],
@@ -157,7 +157,7 @@ AND cc.sort_name LIKE '%$name%'";
         ]);
         $hasPriceField = FALSE;
         if ($priceSetField['count']) {
-          $priceSetId = CRM_Utils_Array::value('price_set_id', $priceSetField['values'][0]);
+          $priceSetId = $priceSetField['values'][0]['price_set_id'] ?? NULL;
           $query = "SELECT * FROM civicrm_price_set_entity WHERE entity_table = 'civicrm_contribution_page' AND entity_id = %1 AND price_set_id = %2";
           $queryParams = [
             '1' => [$contributionPageId, 'Int'],
@@ -392,7 +392,7 @@ AND cc.sort_name LIKE '%$name%'";
     foreach ($membershipPayment['values'] as $value) {
       $endDateTime = strtotime(CRM_Utils_Array::value('membership_id.end_date', $value));
       if (!$checkEndDate || $endDateTime == $lastDayOfThisYearTime) {
-        $membershipIdsToFix[] = CRM_Utils_Array::value('membership_id', $value);
+        $membershipIdsToFix[] = $value['membership_id'] ?? NULL;
       }
     }
     if (!empty($membershipIdsToFix)) {

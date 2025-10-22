@@ -23,7 +23,7 @@ function cpptmembership_civicrm_post($op, $objectName, $objectId, &$objectRef) {
     // Don't botHer unless there's a contribution_page_id, and the related
     // contribution page is our configured CPPT page.
     if (
-      ($contributionPageId = CRM_Utils_Array::value('contribution_page_id', $contribution))
+      ($contributionPageId = $contribution['contribution_page_id'] ?? NULL)
       && ($contributionPageId == _cpptmembership_getSetting('cpptmembership_cpptContributionPageId'))
     ) {
       CRM_Cpptmembership_Utils::correctMembershipDatesForCpptContribution($contribution, TRUE);
@@ -51,7 +51,7 @@ function cpptmembership_civicrm_pre($op, $objectName, $id, &$params) {
         $params['status_id'] = $statusId;
       }
       // Force member start date to member since, if available
-      $params['start_date'] = CRM_Utils_Array::value('join_date', $params, CRM_Utils_Array::value('join_date', $membership));
+      $params['start_date'] = $params['join_date'] ?? $membership['join_date'] ?? NULL;
     }
   }
 }
@@ -205,14 +205,14 @@ function cpptmembership_civicrm_buildForm($formName, &$form) {
           'class' => "cppt-member cppt-member-org-{$orgId}",
         ];
         $noteMarker = '';
-        if (CRM_Utils_Array::value('hasCompletedCurrentPayment', $membership)) {
+        if (!empty($membership['hasCompletedCurrentPayment'])) {
           $noteMarker = ' *';
           $attributes['disabled'] = 'disabled';
         }
-        elseif (CRM_Utils_Array::value('hasPendingCurrentPayment', $membership)) {
+        elseif (!empty($membership['hasPendingCurrentPayment'])) {
           $noteMarker = ' &dagger;';
         }
-        elseif (CRM_Utils_Array::value('paymentNeedsResolution', $membership)) {
+        elseif (!empty($membership['paymentNeedsResolution'])) {
           $noteMarker = ' &Dagger;';
           $attributes['disabled'] = 'disabled';
         }
@@ -468,7 +468,7 @@ function _cpptmembership_getSetting($settingName) {
 
 function _cpptmembership_getPaidMembershipsFromFormValues($formValues) {
   $paidMemberships = [];
-  if ($orgId = CRM_Utils_Array::value('cppt_organization', $formValues)) {
+  if ($orgId = $formValues['cppt_organization'] ?? NULL) {
     $mids = CRM_Utils_Array::value('cppt_mid', $formValues, []);
     foreach (array_keys($mids) as $mid) {
       list($mid_orgId, $mid_membershipId) = explode('_', $mid);
@@ -503,7 +503,7 @@ function _cpptmembership_getCpptPrice($billingPolicy = CPPTMEMBERSHIP_BILLING_PO
       $priceFieldValue = civicrm_api3('priceFieldValue', 'getSingle', [
         'price_field_id' => $priceFieldId,
       ]);
-      $amount = CRM_Utils_Array::value('amount', $priceFieldValue);
+      $amount = $priceFieldValue['amount'] ?? NULL;
     }
   }
   return $amount;
