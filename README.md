@@ -26,11 +26,7 @@ see the official CiviCRM documentation for instructions on [Manual installation 
 * Once installed, configuration is at Administer > CiviMember > CPPT Recertification Page. 
 
 ## Support
-![screenshot](/images/joinery-logo.png)
 
-This is a custom extension for CiviCRM, written for a specific site; it will have 
-no relevant functionality on other sites.
+Support for this package is handled under Joinery's ["As-Is Support" policy](https://joineryhq.com/software-support-levels#as-is-support).
 
-Joinery provides services for CiviCRM including custom extension development, training, data migrations,
-and more. Please contact us directly via https://joineryhq.com to request help with similar custom
-functionality for your own CiviCRM site.
+Public issue queue for this package: https://github.com/twomice/com.joineryhq.cpptmembership/issues
