@@ -323,14 +323,14 @@ function cpptmembership_civicrm_enable() {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_navigationMenu
  */
 function cpptmembership_civicrm_navigationMenu(&$menu) {
-  _cpptmembership_civix_insert_navigation_menu($menu, 'Administer/CiviMember', array(
+  _cpptmembership_civix_insert_navigation_menu($menu, 'Administer/CiviMember', [
     'label' => E::ts('CPPT Recertification Page'),
     'name' => 'CPPT Recertification Page',
     'url' => 'civicrm/admin/cpptmembership/settings?reset=1',
     'permission' => 'administer CiviCRM',
     'operator' => 'AND',
     'separator' => NULL,
-  ));
+  ]);
   _cpptmembership_civix_navigationMenu($menu);
 }
 

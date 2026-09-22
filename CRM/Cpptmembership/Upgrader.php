@@ -39,7 +39,7 @@ class CRM_Cpptmembership_Upgrader extends CRM_Extension_Upgrader_Base {
    */
   public function uninstall() {
     // You'd think this would happen automatically, but it seems not to.
-    $settingsGetFields = civicrm_api3('setting', 'getfields', array('filters' => array('group' => 'cpptmembership')));
+    $settingsGetFields = civicrm_api3('setting', 'getfields', ['filters' => ['group' => 'cpptmembership']]);
     $settings = $settingsGetFields['values'];
     foreach ($settings as $name => $setting) {
       Civi::settings()->revert($name);
