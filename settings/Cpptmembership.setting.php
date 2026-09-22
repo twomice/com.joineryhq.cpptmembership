@@ -2,8 +2,8 @@
 
 use CRM_Cpptmembership_ExtensionUtil as E;
 
-return array(
-  'cpptmembership_cpptMembershipTypeId' => array(
+return [
+  'cpptmembership_cpptMembershipTypeId' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_cpptMembershipTypeId',
@@ -16,11 +16,11 @@ return array(
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getMembershipTypeOptions',
-    'X_form_rules_args' => array(
-      array(E::ts('The field "Membership Type" is required'), 'required'),
-    ),
-  ),
-  'cpptmembership_cpptContributionPageId' => array(
+    'X_form_rules_args' => [
+      [E::ts('The field "Membership Type" is required'), 'required'],
+    ],
+  ],
+  'cpptmembership_cpptContributionPageId' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_cpptContributionPageId',
@@ -33,11 +33,11 @@ return array(
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getContributionPageOptions',
-    'X_form_rules_args' => array(
-      array(E::ts('The field "Contribution Page" is required'), 'required'),
-    ),
-  ),
-  'cpptmembership_priceFieldId' => array(
+    'X_form_rules_args' => [
+      [E::ts('The field "Contribution Page" is required'), 'required'],
+    ],
+  ],
+  'cpptmembership_priceFieldId' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_priceFieldId',
@@ -50,9 +50,9 @@ return array(
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getPriceFieldOptions',
-    'X_form_rules_args' => array(),
-  ),
-  'cpptmembership_currentPriceFieldId' => array(
+    'X_form_rules_args' => [],
+  ],
+  'cpptmembership_currentPriceFieldId' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_currentPriceFieldId',
@@ -65,9 +65,9 @@ return array(
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getPriceFieldOptions',
-    'X_form_rules_args' => array(),
-  ),
-  'cpptmembership_arrearsSoftCreditType' => array(
+    'X_form_rules_args' => [],
+  ],
+  'cpptmembership_arrearsSoftCreditType' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_arrearsSoftCreditType',
@@ -80,9 +80,9 @@ return array(
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getSoftCreditTypeOptions',
-    'X_form_rules_args' => array(),
-  ),
-  'cpptmembership_currentSoftCreditType' => array(
+    'X_form_rules_args' => [],
+  ],
+  'cpptmembership_currentSoftCreditType' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_currentSoftCreditType',
@@ -95,9 +95,9 @@ return array(
     'html_type' => 'Select',
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getSoftCreditTypeOptions',
-    'X_form_rules_args' => array(),
-  ),
-  'cpptmembership_cutoffMonthDayEnglish' => array(
+    'X_form_rules_args' => [],
+  ],
+  'cpptmembership_cutoffMonthDayEnglish' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_cutoffMonthDayEnglish',
@@ -110,11 +110,11 @@ return array(
     'html_type' => 'Text',
     // Omitting this line causes the setting to be omitted from the Settings form:
     'quick_form_type' => 'Element',
-    'X_form_rules_args' => array(
-      array(E::ts('The field "Payment cut-off month and day" is required'), 'required'),
-    ),
-  ),
-  'cpptmembership_statusId' => array(
+    'X_form_rules_args' => [
+      [E::ts('The field "Payment cut-off month and day" is required'), 'required'],
+    ],
+  ],
+  'cpptmembership_statusId' => [
     'group_name' => 'Cpptmembership Settings',
     'group' => 'cpptmembership',
     'name' => 'cpptmembership_statusId',
@@ -128,5 +128,5 @@ return array(
     // Omitting this line causes the setting to be omitted from the Settings form:
     'quick_form_type' => 'Element',
     'X_options_callback' => 'CRM_Cpptmembership_Form_Settings::getStatusOptions',
-  ),
-);
+  ],
+];

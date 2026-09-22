@@ -13,10 +13,10 @@ use CRM_Cpptmembership_ExtensionUtil as E;
  */
 class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
 
-  private static $settingFilter = array('group' => 'cpptmembership');
+  private static $settingFilter = ['group' => 'cpptmembership'];
   private static $extensionName = 'com.joineryhq.cpptmembership';
-  private $_submittedValues = array();
-  private $_settings = array();
+  private $_submittedValues = [];
+  private $_settings = [];
 
   public function __construct(
   $state = NULL, $action = CRM_Core_Action::NONE, $method = 'post', $name = NULL
@@ -69,7 +69,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
           default:
             $add = 'add' . $setting['quick_form_type'];
             if ($add == 'addElement') {
-              $this->$add($setting['html_type'], $name, E::ts($setting['title']), CRM_Utils_Array::value('html_attributes', $setting, array()));
+              $this->$add($setting['html_type'], $name, E::ts($setting['title']), CRM_Utils_Array::value('html_attributes', $setting, []));
             }
             else {
               $this->$add($name, E::ts($setting['title']));
@@ -83,28 +83,28 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
         $rules_args = (array) $setting['X_form_rules_args'];
         foreach ($rules_args as $rule_args) {
           array_unshift($rule_args, $setting['name']);
-          call_user_func_array(array($this, 'addRule'), $rule_args);
+          call_user_func_array([$this, 'addRule'], $rule_args);
         }
       }
     }
     $this->assign("descriptions", $descriptions);
 
-    $this->addButtons(array(
-      array(
+    $this->addButtons([
+      [
         'type' => 'submit',
         'name' => E::ts('Submit'),
         'isDefault' => TRUE,
-      ),
-    ));
+      ],
+    ]);
 
     // export form elements
     $this->assign('elementNames', $this->getRenderableElementNames());
 
-    $breadCrumb = array(
+    $breadCrumb = [
       'title' => E::ts('CPPT Membership Settings'),
       'url' => CRM_Utils_System::url('civicrm/admin/cpptmembership/settings', 'reset=1'),
-    );
-    CRM_Utils_System::appendBreadCrumb(array($breadCrumb));
+    ];
+    CRM_Utils_System::appendBreadCrumb([$breadCrumb]);
 
     // Do some verification on form load
     $this->_verifySettingsOnFormLoad();
@@ -160,7 +160,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
     // auto-rendered in the loop -- such as "qfKey" and "buttons". These
     // items don't have labels. We'll identify renderable by filtering on
     // the 'label'.
-    $elementNames = array();
+    $elementNames = [];
     foreach ($this->_elements as $element) {
       $label = $element->getLabel();
       if (!empty($label)) {
@@ -180,7 +180,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
   }
 
   private static function getSettings() {
-    $settings = civicrm_api3('setting', 'getfields', array('filters' => self::$settingFilter));
+    $settings = civicrm_api3('setting', 'getfields', ['filters' => self::$settingFilter]);
     return $settings['values'];
   }
 
@@ -207,10 +207,10 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
   public function setDefaultValues() {
     static $ret;
     if (!isset($ret)) {
-      $result = civicrm_api3('setting', 'get', array(
+      $result = civicrm_api3('setting', 'get', [
         'return' => array_keys($this->_settings),
         'sequential' => 1,
-      ));
+      ]);
       $ret = $result['values'][0] ?? NULL;
     }
     return $ret;
@@ -221,7 +221,7 @@ class CRM_Cpptmembership_Form_Settings extends CRM_Core_Form {
       return call_user_func($setting['X_options_callback']);
     }
     else {
-      return CRM_Utils_Array::value('X_options', $setting, array());
+      return CRM_Utils_Array::value('X_options', $setting, []);
     }
   }
 
